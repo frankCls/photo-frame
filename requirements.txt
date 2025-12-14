@@ -1,0 +1,5 @@
+# Python dependencies for Raspberry Pi Photo Frame
+# Install with: pip3 install -r requirements.txt
+
+# Image processing library
+Pillow>=10.0.0

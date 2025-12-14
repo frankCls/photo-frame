@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Photo directories (these will be created on the Pi)
+raw_photos/
+processed_photos/
+photoframe_data/
+
+# Test data (local testing only)
+test_data/
+photoframe_config_test.ini
+
+# Logs
+*.log
+logs/
+
+# Configuration (keep the example, ignore the actual config if it has secrets)
+# Uncomment the line below if your config contains sensitive info
+# photoframe_config.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Rclone
+rclone.conf
+
+# Temporary files
+*.tmp
+*.bak

@@ -1,0 +1,35 @@
+# Systemd Service Template for Photo Frame
+# NOTE: This is a TEMPLATE file. During installation, install.sh will automatically
+# substitute 'pi' with the actual username and '/home/pi' with the actual home directory.
+# Do not manually edit /etc/systemd/system/photoframe.service - it's generated from this template.
+
+[Unit]
+Description=Raspberry Pi Photo Frame (Pi3D Slideshow)
+Documentation=https://github.com/YOUR_USERNAME/photo-frame
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi                      # TEMPLATE: Will be replaced with actual user during install
+Group=pi                     # TEMPLATE: Will be replaced with actual user during install
+WorkingDirectory=/home/pi/photoframe_data/processed_photos  # TEMPLATE: /home/pi -> actual home
+Environment="DISPLAY=:0"
+Environment="HOME=/home/pi"  # TEMPLATE: /home/pi -> actual home
+
+# Pi3D PictureFrame command
+# Adjust parameters based on your Pi3D installation
+# Common locations: /usr/local/bin/picture_frame or direct Python module
+ExecStart=/usr/bin/python3 -m pi3d.PictureFrame2020 --config_file /home/pi/photoframe/pi3d_config.yaml  # TEMPLATE: /home/pi -> actual home
+
+# Restart on failure
+Restart=on-failure
+RestartSec=10s
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=photoframe
+
+[Install]
+WantedBy=graphical.target

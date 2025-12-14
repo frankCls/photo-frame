@@ -1,0 +1,56 @@
+# Raspberry Pi Photo Frame Configuration
+# Copy this file to photoframe_config.ini and customize for your setup
+
+[Display]
+# Target screen resolution (adjust to match your display)
+screen_width = 1366
+screen_height = 768
+
+[ImageProcessing]
+# Blur radius for portrait photo backgrounds (higher = more blur)
+# Recommended range: 20-60
+blur_radius = 40
+
+# JPEG quality for processed images (1-100, higher = better quality but larger files)
+# Recommended: 85-95 for photo frames
+jpeg_quality = 90
+
+# Resampling method: LANCZOS (highest quality), BILINEAR, or BICUBIC
+# LANCZOS recommended for best results
+resampling = LANCZOS
+
+[Sync]
+# How often to sync photos from Google Drive (in minutes)
+# Default: 15 (syncs every 15 minutes)
+sync_interval = 15
+
+# Google Drive remote name (configured with rclone)
+# Format: remotename:path/to/folder
+# Example: gdrive:PhotoFrame_Uploads
+gdrive_remote = gdrive:PhotoFrame_Uploads
+
+[Paths]
+# Base directory for photo frame data
+# Default: /home/pi/photoframe_data
+base_dir = /home/pi/photoframe_data
+
+# Directory where rclone syncs raw photos (input)
+raw_photos_dir = %(base_dir)s/raw_photos
+
+# Directory where processed photos are stored (output for Pi3D)
+processed_photos_dir = %(base_dir)s/processed_photos
+
+# Log file location
+log_file = %(base_dir)s/logs/sync.log
+
+[RcloneOptions]
+# Number of concurrent file transfers (lower for Pi Zero 2 W)
+# Recommended: 2-4 for Pi Zero 2 W
+transfers = 2
+
+# Number of concurrent file checkers
+# Recommended: 2-4 for Pi Zero 2 W
+checkers = 2
+
+# Number of low-level retries (helps with WiFi stability)
+low_level_retries = 10
