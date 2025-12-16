@@ -189,6 +189,33 @@ else
 fi
 echo ""
 
+# Step 7.5: Check and install X11 (for Pi OS Lite)
+if ! dpkg -l | grep -q "xserver-xorg"; then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  📺 X11 Server Required for Pi3D"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "Pi3D requires X11 server to access GPU, even on Raspberry Pi OS Lite."
+    echo "This will install minimal X11 (~400MB) without desktop environment."
+    echo ""
+    read -p "Install X11 server now? (y/n): " install_x11
+
+    if [[ "$install_x11" =~ ^[Yy]$ ]]; then
+        echo "Installing X11 server..."
+        apt install -y xinit xserver-xorg
+        echo -e "${GREEN}✓${NC} X11 server installed"
+    else
+        echo -e "${YELLOW}⚠${NC} Skipped X11 installation"
+        echo "Note: Pi3D will not work without X11. Install later with:"
+        echo "  sudo apt install -y xinit xserver-xorg"
+    fi
+    echo ""
+else
+    echo -e "${GREEN}✓${NC} X11 server already installed"
+    echo ""
+fi
+
 # Step 8: Install systemd service
 echo -e "${BLUE}Step 8: Installing systemd service for auto-start...${NC}"
 
@@ -196,10 +223,34 @@ echo -e "${BLUE}Step 8: Installing systemd service for auto-start...${NC}"
 if python3 -c "import pi3d" &> /dev/null 2>&1 || command -v pi3d_demos &> /dev/null; then
     echo "  ℹ Pi3D detected"
 
-    # Generate service file with actual user and paths
+    # Detect Python path (venv or system)
+    if [ -f "$REAL_HOME/photoframe_env/bin/python3" ]; then
+        PYTHON_PATH="$REAL_HOME/photoframe_env/bin/python3"
+    elif [ -f "$REAL_HOME/venv_photoframe/bin/python3" ]; then
+        PYTHON_PATH="$REAL_HOME/venv_photoframe/bin/python3"
+    else
+        PYTHON_PATH="/usr/bin/python3"
+    fi
+
+    PHOTOFRAME_SCRIPT="$REAL_HOME/pi3d_demos/PictureFrame2020.py"
+    PROCESSED_DIR="$REAL_HOME/photoframe_data/processed_photos"
+
+    # Generate ExecStart based on whether xinit is available
+    if command -v xinit >/dev/null 2>&1; then
+        # Use xinit to start X11 server (for Lite + X11)
+        EXEC_START="/usr/bin/xinit $PYTHON_PATH $PHOTOFRAME_SCRIPT $PROCESSED_DIR -- :0"
+        echo "  ℹ Using xinit to start X11 server"
+    else
+        # Assume desktop environment with DISPLAY (for Pi OS Full)
+        EXEC_START="$PYTHON_PATH $PHOTOFRAME_SCRIPT $PROCESSED_DIR"
+        echo "  ℹ Using direct execution (desktop environment detected)"
+    fi
+
+    # Generate service file with actual user, paths, and ExecStart
     sed -e "s|User=pi|User=$REAL_USER|g" \
         -e "s|Group=pi|Group=$REAL_USER|g" \
         -e "s|/home/pi|$REAL_HOME|g" \
+        -e "s|ExecStart=.*# TEMPLATE|ExecStart=$EXEC_START|g" \
         "$PROJECT_DIR/systemd/photoframe.service" > /etc/systemd/system/photoframe.service
 
     # Reload systemd
@@ -212,7 +263,9 @@ if python3 -c "import pi3d" &> /dev/null 2>&1 || command -v pi3d_demos &> /dev/n
     echo "  To start now: sudo systemctl start photoframe.service"
 else
     echo -e "  ${YELLOW}⚠${NC} Pi3D not detected. Systemd service not installed."
-    echo "  Install Pi3D first: pip3 install pi3d-pictureframe"
+    echo "  Install Pi3D first (see SETUP_PI.md for detailed instructions):"
+    echo "    Recommended: Install uv and use 'uv pip install pi3d'"
+    echo "    Alternative: pip3 install --break-system-packages pi3d"
     echo "  Then re-run this installer to install the service"
 fi
 echo ""

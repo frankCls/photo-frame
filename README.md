@@ -30,10 +30,11 @@ A smart, remote-managed digital photo frame powered by Raspberry Pi Zero 2 W wit
 If your Pi isn't set up yet, see the [detailed setup guide](SETUP_PI.md).
 
 Quick checklist:
-- ✓ Raspberry Pi OS installed
+- ✓ Raspberry Pi OS installed (Full with desktop, OR Lite with X11 server)
 - ✓ WiFi configured
 - ✓ SSH enabled
 - ✓ Basic system updates completed
+- ✓ **X11 server** (automatic on Full, install `xinit xserver-xorg` on Lite)
 
 ### 2. Clone This Repository
 
@@ -283,8 +284,9 @@ sudo ~/photoframe/scripts/install.sh  # Re-run installer
 
 #### Display Issues
 - Check GPU memory: `vcgencmd get_mem gpu` (should be 128M)
-- Verify resolution in `/boot/config.txt`
-- Test Pi3D manually: `cd ~/pi3d_demos && python3 PictureFrame2020.py ~/photoframe_data/processed_photos`
+- Verify resolution in `/boot/firmware/config.txt`
+- Verify Pi3D is installed: `pip show pi3d` (activate venv first if using Method 1/2)
+- Test Pi3D manually (requires display attached, won't work over SSH): `cd ~/pi3d_demos && python3 PictureFrame2020.py ~/photoframe_data/processed_photos`
 
 #### WiFi Disconnections
 - Check power save: `iw dev wlan0 get power_save` (should be "off")
