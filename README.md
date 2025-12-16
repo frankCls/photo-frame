@@ -30,11 +30,11 @@ A smart, remote-managed digital photo frame powered by Raspberry Pi Zero 2 W wit
 If your Pi isn't set up yet, see the [detailed setup guide](SETUP_PI.md).
 
 Quick checklist:
-- ✓ Raspberry Pi OS installed (Full with desktop, OR Lite with X11 server)
+- ✓ Raspberry Pi OS installed (Full with desktop, OR Lite with X11 + OpenGL ES)
 - ✓ WiFi configured
 - ✓ SSH enabled
 - ✓ Basic system updates completed
-- ✓ **X11 server** (automatic on Full, install `xinit xserver-xorg` on Lite)
+- ✓ **X11 server & OpenGL ES** (automatic on Full, run install command on Lite - see setup guide)
 
 ### 2. Clone This Repository
 

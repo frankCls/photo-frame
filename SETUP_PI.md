@@ -455,35 +455,42 @@ Press **Escape** to exit.
 
 ## Configuring Graphics for Pi3D (Raspberry Pi OS Lite Only)
 
-> **Note:** If you're using Raspberry Pi OS Full (with desktop), skip this section - X11/Wayland is already installed.
+> **Note:** If you're using Raspberry Pi OS Full (with desktop), skip this section - X11/Wayland and OpenGL ES are already installed.
 
-Pi3D requires an X11 server to access the GPU, even on console. On Raspberry Pi OS Lite, you need to install minimal X11:
+Pi3D requires both an X11 server AND OpenGL ES libraries to access the GPU. On Raspberry Pi OS Lite, you need to install:
 
-### Install Minimal X11 Server
+### Install X11 Server and OpenGL ES Libraries
 
 ```bash
-sudo apt install -y xinit xserver-xorg
+sudo apt install -y xinit xserver-xorg libgles2
 ```
 
-This installs X11 server (~400MB) without the desktop environment.
+This installs (~500MB total):
+- **xinit**: X11 initialization tool
+- **xserver-xorg**: X11 display server
+- **libgles2**: OpenGL ES 2.0 libraries (EGL packages are included as dependencies)
 
 ### Test X11 Installation
 
 Verify X11 works:
 
 ```bash
-# Activate your venv
-source ~/photoframe_env/bin/activate
+# Test Pi3D with X11 (using venv Python)
+sudo xinit ~/photoframe_env/bin/python3 -c "import pi3d; print('Pi3D loaded successfully')" -- :0
 
-# Test Pi3D with X11
-sudo xinit /usr/bin/python3 -c "import pi3d; print('Pi3D loaded successfully')" -- :0
+# If you used Method 2 (venv), replace ~/photoframe_env with ~/venv_photoframe
+# If you used Method 3 (system-wide), use /usr/bin/python3 instead
 ```
 
-If this prints "Pi3D loaded successfully", X11 is working correctly.
+If this prints "Pi3D loaded successfully" and exits cleanly, X11 is working correctly with Pi3D.
 
-### Why X11 is Needed
+### Why X11 AND OpenGL ES are Needed
 
-Pi3D version 4+ (including 2.55) requires X11/Wayland because the modern Mesa graphics driver needs a display server to create OpenGL contexts. This is true even with KMS (`vc4-kms-v3d`) enabled.
+Pi3D version 4+ (including 2.55) requires:
+1. **X11/Wayland**: Display server to create window/drawing surfaces
+2. **OpenGL ES libraries**: GPU rendering capabilities (libgles2)
+
+The modern Mesa graphics driver needs both components to create OpenGL contexts. This is true even with KMS (`vc4-kms-v3d`) enabled.
 
 **Historical note:** Older Pi3D versions (v1-3) could run on console with the legacy Broadcom driver, but this no longer works on Pi 4/5 with the modern KMS driver.
 

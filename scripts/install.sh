@@ -189,30 +189,30 @@ else
 fi
 echo ""
 
-# Step 7.5: Check and install X11 (for Pi OS Lite)
-if ! dpkg -l | grep -q "xserver-xorg"; then
+# Step 7.5: Check and install X11 + OpenGL ES (for Pi OS Lite)
+if ! dpkg -l | grep -q "libgles2"; then
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  📺 X11 Server Required for Pi3D"
+    echo "  📺 X11 Server & OpenGL ES Required for Pi3D"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    echo "Pi3D requires X11 server to access GPU, even on Raspberry Pi OS Lite."
-    echo "This will install minimal X11 (~400MB) without desktop environment."
+    echo "Pi3D requires X11 server AND OpenGL ES libraries to access GPU."
+    echo "This will install X11 + OpenGL ES (~500MB) without desktop environment."
     echo ""
-    read -p "Install X11 server now? (y/n): " install_x11
+    read -p "Install X11 server and OpenGL ES now? (y/n): " install_x11
 
     if [[ "$install_x11" =~ ^[Yy]$ ]]; then
-        echo "Installing X11 server..."
-        apt install -y xinit xserver-xorg
-        echo -e "${GREEN}✓${NC} X11 server installed"
+        echo "Installing X11 server and OpenGL ES libraries..."
+        apt install -y xinit xserver-xorg libgles2
+        echo -e "${GREEN}✓${NC} X11 server and OpenGL ES installed"
     else
-        echo -e "${YELLOW}⚠${NC} Skipped X11 installation"
-        echo "Note: Pi3D will not work without X11. Install later with:"
-        echo "  sudo apt install -y xinit xserver-xorg"
+        echo -e "${YELLOW}⚠${NC} Skipped X11 and OpenGL ES installation"
+        echo "Note: Pi3D will not work without these packages. Install later with:"
+        echo "  sudo apt install -y xinit xserver-xorg libgles2"
     fi
     echo ""
 else
-    echo -e "${GREEN}✓${NC} X11 server already installed"
+    echo -e "${GREEN}✓${NC} X11 server and OpenGL ES already installed"
     echo ""
 fi
 
