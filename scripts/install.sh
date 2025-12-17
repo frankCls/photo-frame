@@ -253,6 +253,13 @@ echo ""
 # Step 4: Create directory structure
 echo -e "${BLUE}Step 4: Creating directory structure...${NC}"
 
+# Update config file if it uses /home/pi to use actual user's home
+if grep -q "base_dir = /home/pi" "$CONFIG_FILE"; then
+    echo "  Updating config file to use $REAL_USER's home directory..."
+    sed -i "s|/home/pi|$REAL_HOME|g" "$CONFIG_FILE"
+    echo -e "  ${GREEN}✓${NC} Config file updated"
+fi
+
 BASE_DIR=$(sudo -u "$REAL_USER" python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$CONFIG_FILE'); print(c.get('Paths','base_dir'))")
 RAW_DIR=$(sudo -u "$REAL_USER" python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$CONFIG_FILE'); print(c.get('Paths','raw_photos_dir'))")
 PROC_DIR=$(sudo -u "$REAL_USER" python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$CONFIG_FILE'); print(c.get('Paths','processed_photos_dir'))")
