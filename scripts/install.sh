@@ -65,7 +65,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
     echo "Please ensure photoframe_config.ini exists"
     exit 1
 fi
-echo -e "${GREEN}✓${NC} Configuration file found"
+echo -e "   ${GREEN}✓${NC} Configuration file found"
 
 # Check if running on Raspberry Pi
 if [ ! -f /proc/device-tree/model ]; then
@@ -76,7 +76,7 @@ if [ ! -f /proc/device-tree/model ]; then
     fi
 else
     PI_MODEL=$(cat /proc/device-tree/model)
-    echo -e "${GREEN}✓${NC} Detected: $PI_MODEL"
+    echo -e "   ${GREEN}✓${NC} Detected: $PI_MODEL"
 fi
 
 echo ""
@@ -84,7 +84,7 @@ echo ""
 # Step 1: Update system
 echo -e "${BLUE}Step 1: Updating system package lists...${NC}"
 apt-get update
-echo -e "${GREEN}✓${NC} System updated"
+echo -e "   ${GREEN}✓${NC} System updated"
 echo ""
 
 # Step 2: Install system dependencies
@@ -109,7 +109,7 @@ for package in "${PACKAGES[@]}"; do
     fi
 done
 
-echo -e "${GREEN}✓${NC} System dependencies installed"
+echo -e "   ${GREEN}✓${NC} System dependencies installed"
 echo ""
 
 # Step 2.5: Create virtual environment for Pi3D
@@ -175,7 +175,7 @@ fi
 # Set Python path for later steps
 VENV_PYTHON="$VENV_DIR/bin/python3"
 
-echo -e "${GREEN}✓${NC} Python environment ready"
+echo -e "   ${GREEN}✓${NC} Python environment ready"
 echo ""
 
 # Step 3: Install Python packages
@@ -189,7 +189,7 @@ else
     sudo -u "$REAL_USER" "$VENV_PYTHON" -m pip install -r "$PROJECT_DIR/requirements.txt"
 fi
 
-echo -e "${GREEN}✓${NC} Python packages installed"
+echo -e "   ${GREEN}✓${NC} Python packages installed"
 echo ""
 
 # Step 3.5: Install Pi3D
@@ -213,7 +213,7 @@ else
     echo -e "  ${GREEN}✓${NC} Pi3D installed"
 fi
 
-echo -e "${GREEN}✓${NC} Pi3D ready"
+echo -e "   ${GREEN}✓${NC} Pi3D ready"
 echo ""
 
 # Step 3.75: Clone pi3d_demos repository
@@ -247,7 +247,7 @@ else
     echo "  This may cause issues with the photo frame service"
 fi
 
-echo -e "${GREEN}✓${NC} Pi3D demos ready"
+echo -e "   ${GREEN}✓${NC} Pi3D demos ready"
 echo ""
 
 # Step 4: Create directory structure
@@ -272,14 +272,14 @@ echo "  ✓ $BASE_DIR"
 echo "  ✓ $RAW_DIR"
 echo "  ✓ $PROC_DIR"
 echo "  ✓ $LOG_DIR"
-echo -e "${GREEN}✓${NC} Directory structure created"
+echo -e "   ${GREEN}✓${NC} Directory structure created"
 echo ""
 
 # Step 5: Make scripts executable
 echo -e "${BLUE}Step 5: Setting script permissions...${NC}"
 chmod +x "$SCRIPT_DIR"/*.sh
 chmod +x "$PROJECT_DIR/src/process_images.py"
-echo -e "${GREEN}✓${NC} Scripts are now executable"
+echo -e "   ${GREEN}✓${NC} Scripts are now executable"
 echo ""
 
 # Step 6: Configure rclone
@@ -343,7 +343,7 @@ if ! dpkg -l | grep -q "libgles2"; then
     if [[ "$install_x11" =~ ^[Yy]$ ]]; then
         echo "Installing X11 server and OpenGL ES libraries..."
         apt install -y xinit xserver-xorg libgles2
-        echo -e "${GREEN}✓${NC} X11 server and OpenGL ES installed"
+        echo -e "   ${GREEN}✓${NC} X11 server and OpenGL ES installed"
     else
         echo -e "${YELLOW}⚠${NC} Skipped X11 and OpenGL ES installation"
         echo "Note: Pi3D will not work without these packages. Install later with:"
@@ -351,7 +351,7 @@ if ! dpkg -l | grep -q "libgles2"; then
     fi
     echo ""
 else
-    echo -e "${GREEN}✓${NC} X11 server and OpenGL ES already installed"
+    echo -e "   ${GREEN}   ✓${NC} X11 server and OpenGL ES already installed"
     echo ""
 fi
 
@@ -483,7 +483,7 @@ else
     echo -e "  ${YELLOW}⚠${NC} Could not find config.txt"
 fi
 
-echo -e "${GREEN}✓${NC} Pi optimization complete"
+echo -e "   ${GREEN}✓${NC} Pi optimization complete"
 echo ""
 
 # Step 10: Run verification
