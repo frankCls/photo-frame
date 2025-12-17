@@ -70,11 +70,11 @@ The installer will:
 - Install system dependencies (rclone, Python packages)
 - Create directory structure
 - Set up automatic syncing
-- Configure Google Drive access
+- Optionally help configure Google Drive access
 - Generate and install systemd service for auto-start
 - Optimize Pi settings
 
-Follow the interactive prompts to configure Google Drive.
+**Note on Google Drive Setup:** For headless Pi setups (no browser), it's easiest to configure rclone on your Mac/PC first, then copy the config file to the Pi. See the [detailed setup guide](SETUP_PI.md#4-configure-google-drive) for complete instructions. The installer will prompt you to configure rclone, or you can skip and do it separately.
 
 ### 5. Reboot
 
@@ -187,8 +187,22 @@ resampling = LANCZOS      # LANCZOS, BILINEAR, or BICUBIC
 ```ini
 [Sync]
 sync_interval = 15                        # Minutes between syncs
-gdrive_remote = gdrive:PhotoFrame_Uploads # Google Drive path
+gdrive_remote = gdrive:PhotoFrame_Uploads # Format: remote_name:folder_path
 ```
+
+**Understanding `gdrive_remote` format:**
+- Format: `remote_name:folder_path`
+- `remote_name` = the name you gave your rclone remote during configuration
+- `folder_path` = the folder within Google Drive to sync from
+
+**Examples:**
+```ini
+gdrive_remote = gdrive:PhotoFrame_Uploads    # Remote "gdrive", folder "PhotoFrame_Uploads"
+gdrive_remote = mygdrive:Family/Photos       # Remote "mygdrive", folder "Family/Photos"
+gdrive_remote = gdrive:                      # Remote "gdrive", root of Google Drive
+```
+
+**To find your remote name:** Run `rclone listremotes` on your Pi after configuration.
 
 ### Paths
 ```ini

@@ -96,6 +96,7 @@ PACKAGES=(
     python3-pil
     rclone
     curl
+    git
 )
 
 for package in "${PACKAGES[@]}"; do
@@ -111,11 +112,94 @@ done
 echo -e "${GREEN}✓${NC} System dependencies installed"
 echo ""
 
+# Step 2.5: Create virtual environment for Pi3D
+echo -e "${BLUE}Step 2.5: Setting up Python virtual environment...${NC}"
+
+VENV_DIR="$REAL_HOME/photoframe_env"
+
+if [ -d "$VENV_DIR" ]; then
+    echo "  ℹ Virtual environment already exists at $VENV_DIR"
+else
+    echo "  Creating virtual environment at $VENV_DIR..."
+    sudo -u "$REAL_USER" python3 -m venv "$VENV_DIR"
+    chown -R "$REAL_USER:$REAL_USER" "$VENV_DIR"
+    echo -e "  ${GREEN}✓${NC} Virtual environment created"
+fi
+
+# Set Python path for later steps
+VENV_PYTHON="$VENV_DIR/bin/python3"
+VENV_PIP="$VENV_DIR/bin/pip"
+
+echo -e "${GREEN}✓${NC} Python environment ready"
+echo ""
+
 # Step 3: Install Python packages
 echo -e "${BLUE}Step 3: Installing Python packages...${NC}"
-sudo -u "$REAL_USER" pip3 install -r "$PROJECT_DIR/requirements.txt" --break-system-packages 2>/dev/null || \
-    sudo -u "$REAL_USER" pip3 install -r "$PROJECT_DIR/requirements.txt"
+sudo -u "$REAL_USER" "$VENV_PIP" install -r "$PROJECT_DIR/requirements.txt"
 echo -e "${GREEN}✓${NC} Python packages installed"
+echo ""
+
+# Step 3.5: Install Pi3D
+echo -e "${BLUE}Step 3.5: Installing Pi3D...${NC}"
+
+# Check if Pi3D is already installed in venv
+if sudo -u "$REAL_USER" "$VENV_PYTHON" -c "import pi3d" &> /dev/null; then
+    PI3D_VERSION=$(sudo -u "$REAL_USER" "$VENV_PYTHON" -c "import pi3d; print(pi3d.__version__)" 2>/dev/null || echo "unknown")
+    echo "  ℹ Pi3D already installed (version: $PI3D_VERSION)"
+else
+    echo "  Installing Pi3D in virtual environment..."
+
+    # Try to use uv first (faster), fall back to pip
+    if command -v uv &> /dev/null; then
+        echo "  Using uv for faster installation..."
+        sudo -u "$REAL_USER" uv pip install --python "$VENV_PYTHON" pi3d
+    else
+        echo "  Using pip to install Pi3D..."
+        sudo -u "$REAL_USER" "$VENV_PIP" install pi3d
+
+        echo ""
+        echo "  💡 Tip: Install uv for faster Python package management:"
+        echo "     curl -LsSf https://astral.sh/uv/install.sh | sh"
+    fi
+
+    echo -e "  ${GREEN}✓${NC} Pi3D installed"
+fi
+
+echo -e "${GREEN}✓${NC} Pi3D ready"
+echo ""
+
+# Step 3.75: Clone pi3d_demos repository
+echo -e "${BLUE}Step 3.75: Setting up Pi3D demos...${NC}"
+
+PI3D_DEMOS_DIR="$REAL_HOME/pi3d_demos"
+
+if [ -d "$PI3D_DEMOS_DIR" ]; then
+    echo "  ℹ pi3d_demos already exists at $PI3D_DEMOS_DIR"
+
+    # Check if PictureFrame2020.py exists
+    if [ ! -f "$PI3D_DEMOS_DIR/PictureFrame2020.py" ]; then
+        echo -e "  ${YELLOW}⚠${NC} PictureFrame2020.py not found, re-cloning..."
+        rm -rf "$PI3D_DEMOS_DIR"
+        sudo -u "$REAL_USER" git clone https://github.com/pi3d/pi3d_demos.git "$PI3D_DEMOS_DIR"
+        chown -R "$REAL_USER:$REAL_USER" "$PI3D_DEMOS_DIR"
+        echo -e "  ${GREEN}✓${NC} pi3d_demos cloned"
+    fi
+else
+    echo "  Cloning pi3d_demos repository..."
+    sudo -u "$REAL_USER" git clone https://github.com/pi3d/pi3d_demos.git "$PI3D_DEMOS_DIR"
+    chown -R "$REAL_USER:$REAL_USER" "$PI3D_DEMOS_DIR"
+    echo -e "  ${GREEN}✓${NC} pi3d_demos cloned"
+fi
+
+# Verify critical file exists
+if [ -f "$PI3D_DEMOS_DIR/PictureFrame2020.py" ]; then
+    echo -e "  ${GREEN}✓${NC} PictureFrame2020.py found"
+else
+    echo -e "  ${RED}✗${NC} PictureFrame2020.py not found in $PI3D_DEMOS_DIR"
+    echo "  This may cause issues with the photo frame service"
+fi
+
+echo -e "${GREEN}✓${NC} Pi3D demos ready"
 echo ""
 
 # Step 4: Create directory structure
@@ -219,21 +303,22 @@ fi
 # Step 8: Install systemd service
 echo -e "${BLUE}Step 8: Installing systemd service for auto-start...${NC}"
 
-# Check if Pi3D is installed
-if python3 -c "import pi3d" &> /dev/null 2>&1 || command -v pi3d_demos &> /dev/null; then
-    echo "  ℹ Pi3D detected"
+# Detect Python path (venv created in Step 2.5)
+if [ -f "$REAL_HOME/photoframe_env/bin/python3" ]; then
+    PYTHON_PATH="$REAL_HOME/photoframe_env/bin/python3"
+elif [ -f "$REAL_HOME/venv_photoframe/bin/python3" ]; then
+    PYTHON_PATH="$REAL_HOME/venv_photoframe/bin/python3"
+else
+    PYTHON_PATH="/usr/bin/python3"
+fi
 
-    # Detect Python path (venv or system)
-    if [ -f "$REAL_HOME/photoframe_env/bin/python3" ]; then
-        PYTHON_PATH="$REAL_HOME/photoframe_env/bin/python3"
-    elif [ -f "$REAL_HOME/venv_photoframe/bin/python3" ]; then
-        PYTHON_PATH="$REAL_HOME/venv_photoframe/bin/python3"
-    else
-        PYTHON_PATH="/usr/bin/python3"
-    fi
+PHOTOFRAME_SCRIPT="$REAL_HOME/pi3d_demos/PictureFrame2020.py"
+PROCESSED_DIR="$REAL_HOME/photoframe_data/processed_photos"
 
-    PHOTOFRAME_SCRIPT="$REAL_HOME/pi3d_demos/PictureFrame2020.py"
-    PROCESSED_DIR="$REAL_HOME/photoframe_data/processed_photos"
+# Check if Pi3D is installed AND PictureFrame2020.py exists
+if "$PYTHON_PATH" -c "import pi3d" &> /dev/null 2>&1 && [ -f "$PHOTOFRAME_SCRIPT" ]; then
+    echo "  ℹ Pi3D detected in $PYTHON_PATH"
+    echo "  ℹ PictureFrame script found at $PHOTOFRAME_SCRIPT"
 
     # Generate ExecStart based on whether xinit is available
     if command -v xinit >/dev/null 2>&1; then
@@ -262,11 +347,25 @@ if python3 -c "import pi3d" &> /dev/null 2>&1 || command -v pi3d_demos &> /dev/n
     echo "  Note: Pi3D will start on next boot"
     echo "  To start now: sudo systemctl start photoframe.service"
 else
-    echo -e "  ${YELLOW}⚠${NC} Pi3D not detected. Systemd service not installed."
-    echo "  Install Pi3D first (see SETUP_PI.md for detailed instructions):"
-    echo "    Recommended: Install uv and use 'uv pip install pi3d'"
-    echo "    Alternative: pip3 install --break-system-packages pi3d"
-    echo "  Then re-run this installer to install the service"
+    echo -e "  ${YELLOW}⚠${NC} Cannot install systemd service"
+
+    # Provide specific error messages
+    if ! "$PYTHON_PATH" -c "import pi3d" &> /dev/null 2>&1; then
+        echo "  Reason: Pi3D not found in $PYTHON_PATH"
+        echo "  This should not happen - Step 3.5 should have installed it"
+    fi
+
+    if [ ! -f "$PHOTOFRAME_SCRIPT" ]; then
+        echo "  Reason: PictureFrame2020.py not found at $PHOTOFRAME_SCRIPT"
+        echo "  This should not happen - Step 3.75 should have cloned it"
+    fi
+
+    echo ""
+    echo "  Manual fix:"
+    echo "    1. Check venv: source $REAL_HOME/photoframe_env/bin/activate"
+    echo "    2. Verify Pi3D: python3 -c 'import pi3d'"
+    echo "    3. Verify script: ls -l $PHOTOFRAME_SCRIPT"
+    echo "    4. Re-run installer: sudo ./scripts/install.sh"
 fi
 echo ""
 

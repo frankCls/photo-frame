@@ -547,16 +547,85 @@ Follow the on-screen prompts.
 
 ### 4. Configure Google Drive
 
-If not done during installation:
+**Recommended Method: Configure on Your Computer First**
+
+Since the Pi is headless (no browser), the easiest way is to configure rclone on your local computer, then copy the config to the Pi:
+
+**On Your Mac/PC:**
 
 ```bash
+# Install rclone (Mac)
+brew install rclone
+
+# Or download from https://rclone.org/downloads/ for Windows/Linux
+
+# Configure Google Drive
+rclone config
+```
+
+Follow the prompts:
+- Choose **n** (new remote)
+- Name: **gdrive**
+- Storage: Type number for **drive** (Google Drive)
+- Client ID: Press **Enter** (leave blank)
+- Client Secret: Press **Enter** (leave blank)
+- Scope: Type **1** (full access)
+- Root folder ID: Press **Enter**
+- Service Account: Press **Enter**
+- Edit advanced config: **n**
+- Use auto config: **y** (browser will open)
+- Authorize rclone in browser
+- Configure as team drive: **n**
+- Confirm: **y**
+- Quit: **q**
+
+```bash
+# Verify it works
+rclone lsd gdrive:
+
+# Find config location
+rclone config file
+# Shows path like: /Users/yourname/.config/rclone/rclone.conf
+
+# Copy to Pi (replace <pi-ip> with your Pi's IP address)
+scp ~/.config/rclone/rclone.conf pi@<pi-ip>:~/.config/rclone/
+```
+
+**On Your Pi:**
+
+```bash
+# Verify connection works
+rclone lsd gdrive:
+
+# Run setup script to configure the folder
 ./scripts/setup_rclone.sh
 ```
 
-This will guide you through:
-1. Google Drive authentication
-2. Selecting/creating the upload folder
-3. Testing the connection
+The script will detect the existing remote and help you set up the upload folder.
+
+**Understanding the Configuration:**
+
+After setup, `photoframe_config.ini` will contain:
+```ini
+gdrive_remote = gdrive:PhotoFrame_Uploads
+```
+
+**Format:** `remote_name:folder_path`
+- `remote_name` = the name you chose during `rclone config` (e.g., "gdrive")
+- `folder_path` = the Google Drive folder to sync from (e.g., "PhotoFrame_Uploads")
+
+**Examples:**
+```ini
+gdrive_remote = gdrive:PhotoFrame_Uploads    # Remote "gdrive", folder "PhotoFrame_Uploads"
+gdrive_remote = mygdrive:Family/Photos       # Remote "mygdrive", nested folder
+gdrive_remote = gdrive:                      # Remote "gdrive", root of Drive
+```
+
+**To check your remote name:** `rclone listremotes`
+
+**Alternative: Configure Directly on Pi (Advanced)**
+
+If you prefer to configure on the Pi itself, run `./scripts/setup_rclone.sh` and follow the headless authentication instructions provided by the script.
 
 ### 5. Test Everything
 

@@ -59,8 +59,8 @@ trap "rm -f $LOCKFILE" EXIT
 
 # Load configuration
 GDRIVE_REMOTE=$(read_config "Sync" "gdrive_remote" "gdrive:PhotoFrame_Uploads")
-RAW_DIR=$(read_config "Paths" "raw_photos_dir" "/home/pi/photoframe_data/raw_photos")
-LOG_FILE=$(read_config "Paths" "log_file" "/home/pi/photoframe_data/logs/sync.log")
+RAW_DIR=$(read_config "Paths" "raw_photos_dir" "$HOME/photoframe_data/raw_photos")
+LOG_FILE=$(read_config "Paths" "log_file" "$HOME/photoframe_data/logs/sync.log")
 TRANSFERS=$(read_config "RcloneOptions" "transfers" "2")
 CHECKERS=$(read_config "RcloneOptions" "checkers" "2")
 RETRIES=$(read_config "RcloneOptions" "low_level_retries" "10")
