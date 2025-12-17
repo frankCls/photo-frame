@@ -371,11 +371,11 @@ if "$PYTHON_PATH" -c "import pi3d" &> /dev/null 2>&1 && [ -f "$PHOTOFRAME_SCRIPT
     # Generate ExecStart based on whether xinit is available
     if command -v xinit >/dev/null 2>&1; then
         # Use xinit to start X11 server (for Lite + X11)
-        EXEC_START="/usr/bin/xinit $PYTHON_PATH $PHOTOFRAME_SCRIPT $PROCESSED_DIR -- :0"
+        EXEC_START="/usr/bin/xinit $PYTHON_PATH $PHOTOFRAME_SCRIPT -p $PROCESSED_DIR -- :0"
         echo "  ℹ Using xinit to start X11 server"
     else
         # Assume desktop environment with DISPLAY (for Pi OS Full)
-        EXEC_START="$PYTHON_PATH $PHOTOFRAME_SCRIPT $PROCESSED_DIR"
+        EXEC_START="$PYTHON_PATH $PHOTOFRAME_SCRIPT -p $PROCESSED_DIR"
         echo "  ℹ Using direct execution (desktop environment detected)"
     fi
 
