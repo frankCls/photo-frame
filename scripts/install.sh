@@ -118,29 +118,54 @@ echo -e "${BLUE}Step 2.5: Setting up Python virtual environment...${NC}"
 VENV_DIR="$REAL_HOME/photoframe_env"
 
 # Check for uv and offer to install it
-if ! sudo -u "$REAL_USER" command -v uv &> /dev/null; then
+USE_UV=false
+if sudo -u "$REAL_USER" bash -c "command -v uv" &> /dev/null || [ -f "$REAL_HOME/.local/bin/uv" ] || [ -f "$REAL_HOME/.cargo/bin/uv" ]; then
+    USE_UV=true
+    echo "  ℹ uv detected - will use uv for faster package installation"
+else
     echo "  💡 uv not found - uv is a fast Python package installer (10-100x faster than pip)"
     read -p "  Install uv now? (recommended, y/n): " INSTALL_UV
     if [[ "$INSTALL_UV" =~ ^[Yy]$ ]]; then
         echo "  Installing uv..."
-        sudo -u "$REAL_USER" curl -LsSf https://astral.sh/uv/install.sh | sudo -u "$REAL_USER" sh
-        # Source the profile to make uv available in this session
-        export PATH="$REAL_HOME/.cargo/bin:$PATH"
-        echo -e "  ${GREEN}✓${NC} uv installed"
+        sudo -u "$REAL_USER" bash -c "curl -LsSf https://astral.sh/uv/install.sh | sh"
+
+        # Check if uv was installed successfully
+        if [ -f "$REAL_HOME/.local/bin/uv" ] || [ -f "$REAL_HOME/.cargo/bin/uv" ]; then
+            USE_UV=true
+            echo -e "  ${GREEN}✓${NC} uv installed"
+        else
+            echo -e "  ${YELLOW}⚠${NC} uv installation may have failed, falling back to pip"
+        fi
     else
         echo "  Continuing with pip (slower)"
     fi
 fi
 
+# Check if venv exists and is healthy
+VENV_NEEDS_RECREATION=false
 if [ -d "$VENV_DIR" ]; then
     echo "  ℹ Virtual environment already exists at $VENV_DIR"
-else
+
+    # Check if venv is healthy (has python and pip or can install packages)
+    if [ ! -f "$VENV_DIR/bin/python3" ]; then
+        echo -e "  ${YELLOW}⚠${NC} Virtual environment is broken (no python3), recreating..."
+        VENV_NEEDS_RECREATION=true
+    fi
+fi
+
+if [ ! -d "$VENV_DIR" ] || [ "$VENV_NEEDS_RECREATION" = true ]; then
+    if [ "$VENV_NEEDS_RECREATION" = true ]; then
+        rm -rf "$VENV_DIR"
+    fi
+
     echo "  Creating virtual environment at $VENV_DIR..."
-    if sudo -u "$REAL_USER" command -v uv &> /dev/null; then
+    if [ "$USE_UV" = true ]; then
         # Use uv to create venv (faster)
-        sudo -u "$REAL_USER" uv venv "$VENV_DIR"
+        echo "  Using uv venv..."
+        sudo -u "$REAL_USER" bash -c "export PATH=\"$REAL_HOME/.local/bin:$REAL_HOME/.cargo/bin:\$PATH\"; uv venv '$VENV_DIR'"
     else
         # Fall back to standard venv
+        echo "  Using python3 -m venv..."
         sudo -u "$REAL_USER" python3 -m venv "$VENV_DIR"
     fi
     chown -R "$REAL_USER:$REAL_USER" "$VENV_DIR"
@@ -156,9 +181,9 @@ echo ""
 # Step 3: Install Python packages
 echo -e "${BLUE}Step 3: Installing Python packages...${NC}"
 
-if sudo -u "$REAL_USER" command -v uv &> /dev/null; then
+if [ "$USE_UV" = true ]; then
     echo "  Using uv for faster installation..."
-    sudo -u "$REAL_USER" uv pip install --python "$VENV_PYTHON" -r "$PROJECT_DIR/requirements.txt"
+    sudo -u "$REAL_USER" bash -c "export PATH=\"$REAL_HOME/.local/bin:$REAL_HOME/.cargo/bin:\$PATH\"; uv pip install --python '$VENV_PYTHON' -r '$PROJECT_DIR/requirements.txt'"
 else
     echo "  Using pip..."
     sudo -u "$REAL_USER" "$VENV_PYTHON" -m pip install -r "$PROJECT_DIR/requirements.txt"
@@ -177,10 +202,9 @@ if sudo -u "$REAL_USER" "$VENV_PYTHON" -c "import pi3d" &> /dev/null; then
 else
     echo "  Installing Pi3D in virtual environment..."
 
-    # Try to use uv first (faster), fall back to pip
-    if sudo -u "$REAL_USER" command -v uv &> /dev/null; then
+    if [ "$USE_UV" = true ]; then
         echo "  Using uv for faster installation..."
-        sudo -u "$REAL_USER" uv pip install --python "$VENV_PYTHON" pi3d
+        sudo -u "$REAL_USER" bash -c "export PATH=\"$REAL_HOME/.local/bin:$REAL_HOME/.cargo/bin:\$PATH\"; uv pip install --python '$VENV_PYTHON' pi3d"
     else
         echo "  Using pip to install Pi3D..."
         sudo -u "$REAL_USER" "$VENV_PYTHON" -m pip install pi3d
