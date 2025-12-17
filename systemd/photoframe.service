@@ -5,7 +5,7 @@
 
 [Unit]
 Description=Raspberry Pi Photo Frame (Pi3D Slideshow)
-Documentation=https://github.com/YOUR_USERNAME/photo-frame
+Documentation=https://github.com/frankCls/photo-frame
 After=network-online.target
 Wants=network-online.target
 
@@ -13,7 +13,7 @@ Wants=network-online.target
 Type=simple
 User=pi                      # TEMPLATE: Will be replaced with actual user during install
 Group=pi                     # TEMPLATE: Will be replaced with actual user during install
-WorkingDirectory=/home/pi/photoframe_data/processed_photos  # TEMPLATE: /home/pi -> actual home
+WorkingDirectory=/home/pi/photo-frame/processed_photos  # TEMPLATE: /home/pi -> actual home
 Environment="HOME=/home/pi"  # TEMPLATE: /home/pi -> actual home
 
 # Pi3D PictureFrame command
