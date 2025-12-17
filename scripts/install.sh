@@ -382,6 +382,8 @@ if "$PYTHON_PATH" -c "import pi3d" &> /dev/null 2>&1 && [ -f "$PHOTOFRAME_SCRIPT
     # Generate service file with actual user, paths, and ExecStart
     sed -e "s|User=pi.*|User=$REAL_USER|g" \
         -e "s|Group=pi.*|Group=$REAL_USER|g" \
+        -e "s|WorkingDirectory=/home/pi.*|WorkingDirectory=$PROCESSED_DIR|g" \
+        -e "s|Environment=\"HOME=/home/pi\".*|Environment=\"HOME=$REAL_HOME\"|g" \
         -e "s|/home/pi|$REAL_HOME|g" \
         -e "s|ExecStart=.*# TEMPLATE|ExecStart=$EXEC_START|g" \
         "$PROJECT_DIR/systemd/photoframe.service" > /etc/systemd/system/photoframe.service
