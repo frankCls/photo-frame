@@ -31,8 +31,8 @@ gdrive_remote = gdrive:PhotoFrame_Uploads
 
 [Paths]
 # Base directory for photo frame data
-# Default: /home/pi/photoframe_data
-base_dir = /home/pi/photoframe_data
+# Default: /home/pi/photo-frame
+base_dir = /home/pi/photo-frame
 
 # Directory where rclone syncs raw photos (input)
 raw_photos_dir = %(base_dir)s/raw_photos

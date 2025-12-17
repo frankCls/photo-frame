@@ -161,7 +161,7 @@ with open('$CONFIG_FILE', 'w') as f:
         echo "Next steps:"
         echo "1. Share the '$FOLDER_NAME' folder with family members"
         echo "2. Test the sync: ./scripts/sync.sh"
-        echo "3. Check logs: tail -f ~/photoframe_data/logs/sync.log"
+        echo "3. Check logs: tail -f ~/photo-frame/logs/sync.log"
         echo ""
         echo "Family members can now upload photos to this folder,"
         echo "and they will automatically sync to your photo frame!"

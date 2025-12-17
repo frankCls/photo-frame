@@ -361,7 +361,7 @@ else
 fi
 
 PHOTOFRAME_SCRIPT="$REAL_HOME/pi3d_demos/PictureFrame2020.py"
-PROCESSED_DIR="$REAL_HOME/photoframe_data/processed_photos"
+PROCESSED_DIR="$REAL_HOME/photo-frame/processed_photos"
 
 # Check if Pi3D is installed AND PictureFrame2020.py exists
 if "$PYTHON_PATH" -c "import pi3d" &> /dev/null 2>&1 && [ -f "$PHOTOFRAME_SCRIPT" ]; then

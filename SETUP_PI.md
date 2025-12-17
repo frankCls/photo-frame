@@ -645,7 +645,7 @@ This checks that all components are properly configured.
 
 Check the logs:
 ```bash
-tail -f ~/photoframe_data/logs/sync.log
+tail -f ~/photo-frame/logs/sync.log
 ```
 
 ### 7. Reboot
@@ -700,7 +700,7 @@ sudo nano /boot/config.txt
 3. Test manually:
 ```bash
 cd ~/pi3d_demos
-python3 PictureFrame2020.py ~/photoframe_data/processed_photos
+python3 PictureFrame2020.py ~/photo-frame/processed_photos
 ```
 
 ### Sync Not Working
@@ -708,7 +708,7 @@ python3 PictureFrame2020.py ~/photoframe_data/processed_photos
 1. Check rclone config: `rclone listremotes`
 2. Test connection: `rclone lsd gdrive:`
 3. Check cron: `crontab -l`
-4. View logs: `tail -50 ~/photoframe_data/logs/sync.log`
+4. View logs: `tail -50 ~/photo-frame/logs/sync.log`
 
 ---
 
@@ -726,7 +726,7 @@ sudo ./scripts/install.sh  # Re-run installer if needed
 
 ```bash
 # Sync logs
-tail -f ~/photoframe_data/logs/sync.log
+tail -f ~/photo-frame/logs/sync.log
 
 # Pi3D logs
 journalctl -u photoframe.service -f
@@ -781,7 +781,7 @@ screen_height = 1080
 2. Re-process existing images:
 ```bash
 cd ~/photoframe
-rm -rf ~/photoframe_data/processed_photos/*
+rm -rf ~/photo-frame/processed_photos/*
 python3 src/process_images.py
 ```
 

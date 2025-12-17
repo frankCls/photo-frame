@@ -14,7 +14,7 @@ build/
 # Photo directories (these will be created on the Pi)
 raw_photos/
 processed_photos/
-photoframe_data/
+photo-frame/
 
 # Test data (local testing only)
 test_data/

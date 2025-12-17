@@ -107,7 +107,7 @@ After reboot, your photo frame will:
 │   ├── photoframe_config.ini     # Main configuration
 │   └── requirements.txt
 │
-└── photoframe_data/               # Created during install
+└── photo-frame/               # Created during install
     ├── raw_photos/                # Synced from Google Drive
     ├── processed_photos/          # Resized for display (Pi3D source)
     └── logs/
@@ -207,7 +207,7 @@ gdrive_remote = gdrive:                      # Remote "gdrive", root of Google D
 ### Paths
 ```ini
 [Paths]
-base_dir = /home/pi/photoframe_data
+base_dir = /home/pi/photo-frame
 raw_photos_dir = %(base_dir)s/raw_photos
 processed_photos_dir = %(base_dir)s/processed_photos
 log_file = %(base_dir)s/logs/sync.log
@@ -239,7 +239,7 @@ low_level_retries = 10     # WiFi stability
 
 #### View Sync Logs
 ```bash
-tail -f ~/photoframe_data/logs/sync.log
+tail -f ~/photo-frame/logs/sync.log
 ```
 
 #### Test Setup
@@ -250,7 +250,7 @@ tail -f ~/photoframe_data/logs/sync.log
 #### Reprocess All Images
 ```bash
 cd ~/photoframe
-rm -rf ~/photoframe_data/processed_photos/*
+rm -rf ~/photo-frame/processed_photos/*
 python3 src/process_images.py
 ```
 
@@ -293,14 +293,14 @@ sudo ~/photoframe/scripts/install.sh  # Re-run installer
 #### Sync Not Working
 - Check internet: `ping google.com`
 - Test rclone: `rclone lsd gdrive:`
-- View logs: `tail -50 ~/photoframe_data/logs/sync.log`
+- View logs: `tail -50 ~/photo-frame/logs/sync.log`
 - Verify cron: `crontab -l`
 
 #### Display Issues
 - Check GPU memory: `vcgencmd get_mem gpu` (should be 128M)
 - Verify resolution in `/boot/firmware/config.txt`
 - Verify Pi3D is installed: `pip show pi3d` (activate venv first if using Method 1/2)
-- Test Pi3D manually (requires display attached, won't work over SSH): `cd ~/pi3d_demos && python3 PictureFrame2020.py ~/photoframe_data/processed_photos`
+- Test Pi3D manually (requires display attached, won't work over SSH): `cd ~/pi3d_demos && python3 PictureFrame2020.py ~/photo-frame/processed_photos`
 
 #### WiFi Disconnections
 - Check power save: `iw dev wlan0 get power_save` (should be "off")
@@ -310,7 +310,7 @@ sudo ~/photoframe/scripts/install.sh  # Re-run installer
 - Check Python: `python3 --version`
 - Test Pillow: `python3 -c "import PIL; print(PIL.__version__)"`
 - Run manually: `python3 ~/photoframe/src/process_images.py`
-- Check logs: `~/photoframe_data/logs/sync.log`
+- Check logs: `~/photo-frame/logs/sync.log`
 
 ### Getting Help
 
@@ -339,7 +339,7 @@ sudo nano /boot/config.txt
 
 3. Reprocess images:
 ```bash
-rm -rf ~/photoframe_data/processed_photos/*
+rm -rf ~/photo-frame/processed_photos/*
 python3 ~/photoframe/src/process_images.py
 ```
 
@@ -410,7 +410,7 @@ This will:
 To completely remove everything:
 ```bash
 cd ~
-rm -rf photoframe photoframe_data
+rm -rf photoframe photo-frame
 ```
 
 ## Technical Details
@@ -434,7 +434,7 @@ The installer makes these changes to your Pi:
 2. **Systemd service**: Dynamically generates and installs `/etc/systemd/system/photoframe.service` with your actual username and paths
 3. **WiFi config**: Disables power management via systemd service
 4. **GPU memory**: Sets `gpu_mem=128` in `/boot/config.txt`
-5. **Directories**: Creates `~/photoframe_data/` structure
+5. **Directories**: Creates `~/photo-frame/` structure
 
 All changes can be reverted with the uninstall script.
 

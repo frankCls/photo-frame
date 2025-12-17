@@ -232,7 +232,7 @@ if [ $FAIL -eq 0 ]; then
     echo ""
     echo "Next steps:"
     echo "1. Test sync: ./scripts/sync.sh"
-    echo "2. Check logs: tail -f ~/photoframe_data/logs/sync.log"
+    echo "2. Check logs: tail -f ~/photo-frame/logs/sync.log"
     echo "3. Reboot to start the slideshow: sudo reboot"
     exit 0
 else
