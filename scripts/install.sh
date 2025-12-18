@@ -345,63 +345,18 @@ else
 fi
 echo ""
 
-# Step 7.5: Check and install X11 + OpenGL ES (for Pi OS Lite)
-if ! dpkg -l | grep -q "libgles2"; then
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  📺 X11 Server & OpenGL ES Required for Pi3D"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    echo "Pi3D requires X11 server AND OpenGL ES libraries to access GPU."
-    echo "This will install X11 + OpenGL ES (~500MB) without desktop environment."
-    echo ""
-    read -p "Install X11 server and OpenGL ES now? (y/n): " install_x11
+# Step 7.5: Install cage compositor
+echo -e "${BLUE}Step 7.5: Installing cage compositor...${NC}"
 
-    if [[ "$install_x11" =~ ^[Yy]$ ]]; then
-        echo "Installing X11 server and OpenGL ES libraries..."
-        apt install -y xinit xserver-xorg libgles2
-        echo -e "   ${GREEN}✓${NC} X11 server and OpenGL ES installed"
-    else
-        echo -e "${YELLOW}⚠${NC} Skipped X11 and OpenGL ES installation"
-        echo "Note: Pi3D will not work without these packages. Install later with:"
-        echo "  sudo apt install -y xinit xserver-xorg libgles2"
-    fi
-    echo ""
+if ! dpkg -l | grep -q "^ii  cage "; then
+    echo "  Installing cage compositor and OpenGL ES..."
+    apt-get install -y cage libgles2
+    echo -e "  ${GREEN}✓${NC} cage and OpenGL ES installed"
 else
-    echo -e "   ${GREEN}   ✓${NC} X11 server and OpenGL ES already installed"
-    echo ""
+    echo "  ℹ cage already installed"
 fi
 
-# Step 7.6: Configure X11 Wrapper for systemd service
-echo -e "${BLUE}Step 7.6: Configuring X11 wrapper...${NC}"
-
-XWRAPPER_CONFIG="/etc/X11/Xwrapper.config"
-
-# Check if X11 is installed
-if command -v xinit >/dev/null 2>&1; then
-    # Backup original if it exists
-    if [ -f "$XWRAPPER_CONFIG" ]; then
-        cp "$XWRAPPER_CONFIG" "$XWRAPPER_CONFIG.backup" 2>/dev/null || true
-    fi
-
-    # Set allowed_users=anybody
-    if grep -q "^allowed_users=" "$XWRAPPER_CONFIG" 2>/dev/null; then
-        sed -i 's/^allowed_users=.*/allowed_users=anybody/' "$XWRAPPER_CONFIG"
-    else
-        echo "allowed_users=anybody" >> "$XWRAPPER_CONFIG"
-    fi
-
-    # Set needs_root_rights=yes
-    if grep -q "^needs_root_rights=" "$XWRAPPER_CONFIG" 2>/dev/null; then
-        sed -i 's/^needs_root_rights=.*/needs_root_rights=yes/' "$XWRAPPER_CONFIG"
-    else
-        echo "needs_root_rights=yes" >> "$XWRAPPER_CONFIG"
-    fi
-
-    echo -e "${GREEN}✓${NC} X11 wrapper configured for systemd service"
-else
-    echo -e "${YELLOW}⚠${NC} X11 not installed, skipping wrapper configuration"
-fi
+echo -e "${GREEN}✓${NC} cage compositor ready"
 echo ""
 
 # Step 8: Install systemd service
@@ -424,16 +379,12 @@ if "$PYTHON_PATH" -c "import pi3d" &> /dev/null 2>&1 && [ -f "$PHOTOFRAME_SCRIPT
     echo "  ℹ Pi3D detected in $PYTHON_PATH"
     echo "  ℹ PictureFrame script found at $PHOTOFRAME_SCRIPT"
 
-    # Generate ExecStart based on whether xinit is available
-    if command -v xinit >/dev/null 2>&1; then
-        # Use xinit to start X11 server (for Lite + X11)
-        EXEC_START="/usr/bin/xinit $PYTHON_PATH $PHOTOFRAME_SCRIPT -p $PROCESSED_DIR -- :0"
-        echo "  ℹ Using xinit to start X11 server"
-    else
-        # Assume desktop environment with DISPLAY (for Pi OS Full)
-        EXEC_START="$PYTHON_PATH $PHOTOFRAME_SCRIPT -p $PROCESSED_DIR"
-        echo "  ℹ Using direct execution (desktop environment detected)"
-    fi
+    # Get user UID for XDG_RUNTIME_DIR (needed by cage)
+    USER_UID=$(id -u "$REAL_USER")
+
+    # Generate ExecStart for cage
+    EXEC_START="/usr/bin/cage -s -- $PYTHON_PATH $PHOTOFRAME_SCRIPT -p $PROCESSED_DIR"
+    echo "  ℹ Using cage compositor (Wayland kiosk mode)"
 
     # Generate service file with actual user, paths, and ExecStart
     sed -e "s|User=pi.*|User=$REAL_USER|g" \
@@ -441,7 +392,8 @@ if "$PYTHON_PATH" -c "import pi3d" &> /dev/null 2>&1 && [ -f "$PHOTOFRAME_SCRIPT
         -e "s|WorkingDirectory=/home/pi.*|WorkingDirectory=$PROCESSED_DIR|g" \
         -e "s|Environment=\"HOME=/home/pi\".*|Environment=\"HOME=$REAL_HOME\"|g" \
         -e "s|/home/pi|$REAL_HOME|g" \
-        -e "s|ExecStart=.*# TEMPLATE|ExecStart=$EXEC_START|g" \
+        -e "s|__UID__|$USER_UID|g" \
+        -e "s|__EXEC_START__|$EXEC_START|g" \
         "$PROJECT_DIR/systemd/photoframe.service" > /etc/systemd/system/photoframe.service
 
     # Reload systemd
@@ -542,6 +494,24 @@ echo ""
 sudo -u "$REAL_USER" "$SCRIPT_DIR/test_setup.sh" || true
 
 echo ""
+
+# Step 11: Boot mode configuration guidance
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  📺 Boot Mode Configuration (IMPORTANT)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo -e "${YELLOW}For optimal cage performance:${NC}"
+echo ""
+echo "1. Run: sudo raspi-config"
+echo "2. Select: System Options → Boot / Auto Login"
+echo "3. Choose: Console Autologin (B2)"
+echo "4. Finish and reboot"
+echo ""
+echo "This boots to console (not desktop), saving ~33MB RAM."
+echo "The photoframe service will start automatically."
+echo ""
+
 echo -e "${GREEN}=============================================="
 echo "  Installation Complete!"
 echo -e "==============================================${NC}"
