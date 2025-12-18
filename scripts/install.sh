@@ -112,6 +112,23 @@ done
 echo -e "   ${GREEN}✓${NC} System dependencies installed"
 echo ""
 
+# Step 2.1: Configure user permissions for GPU/TTY access
+echo -e "${BLUE}Step 2.1: Configuring user permissions...${NC}"
+
+# Add user to required groups for X11/GPU access
+REQUIRED_GROUPS="video tty input render"
+for group in $REQUIRED_GROUPS; do
+    if groups "$REAL_USER" | grep -q "\b$group\b"; then
+        echo "  ℹ User already in group: $group"
+    else
+        echo "  Adding $REAL_USER to group: $group"
+        usermod -a -G "$group" "$REAL_USER"
+    fi
+done
+
+echo -e "${GREEN}✓${NC} User permissions configured"
+echo ""
+
 # Step 2.5: Create virtual environment for Pi3D
 echo -e "${BLUE}Step 2.5: Setting up Python virtual environment...${NC}"
 
@@ -354,6 +371,38 @@ else
     echo -e "   ${GREEN}   ✓${NC} X11 server and OpenGL ES already installed"
     echo ""
 fi
+
+# Step 7.6: Configure X11 Wrapper for systemd service
+echo -e "${BLUE}Step 7.6: Configuring X11 wrapper...${NC}"
+
+XWRAPPER_CONFIG="/etc/X11/Xwrapper.config"
+
+# Check if X11 is installed
+if command -v xinit >/dev/null 2>&1; then
+    # Backup original if it exists
+    if [ -f "$XWRAPPER_CONFIG" ]; then
+        cp "$XWRAPPER_CONFIG" "$XWRAPPER_CONFIG.backup" 2>/dev/null || true
+    fi
+
+    # Set allowed_users=anybody
+    if grep -q "^allowed_users=" "$XWRAPPER_CONFIG" 2>/dev/null; then
+        sed -i 's/^allowed_users=.*/allowed_users=anybody/' "$XWRAPPER_CONFIG"
+    else
+        echo "allowed_users=anybody" >> "$XWRAPPER_CONFIG"
+    fi
+
+    # Set needs_root_rights=yes
+    if grep -q "^needs_root_rights=" "$XWRAPPER_CONFIG" 2>/dev/null; then
+        sed -i 's/^needs_root_rights=.*/needs_root_rights=yes/' "$XWRAPPER_CONFIG"
+    else
+        echo "needs_root_rights=yes" >> "$XWRAPPER_CONFIG"
+    fi
+
+    echo -e "${GREEN}✓${NC} X11 wrapper configured for systemd service"
+else
+    echo -e "${YELLOW}⚠${NC} X11 not installed, skipping wrapper configuration"
+fi
+echo ""
 
 # Step 8: Install systemd service
 echo -e "${BLUE}Step 8: Installing systemd service for auto-start...${NC}"
