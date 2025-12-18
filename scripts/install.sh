@@ -267,6 +267,31 @@ fi
 echo -e "   ${GREEN}✓${NC} Pi3D demos ready"
 echo ""
 
+# Step 3.8: Configure PictureFrame2020 for Pi Zero 2W
+echo -e "${BLUE}Step 3.8: Configuring Ken Burns effects...${NC}"
+
+PI3D_CONFIG="$REAL_HOME/pi3d_demos/PictureFrame2020config.py"
+
+if [ -f "$PI3D_CONFIG" ]; then
+    echo "  Optimizing for Pi Zero 2W (512MB RAM)..."
+
+    # Backup original
+    cp "$PI3D_CONFIG" "$PI3D_CONFIG.backup" 2>/dev/null || true
+
+    # Enable Ken Burns with optimized settings
+    sed -i "s/^KENBURNS = .*/KENBURNS = True/" "$PI3D_CONFIG"
+    sed -i "s/^FPS = .*/FPS = 25.0/" "$PI3D_CONFIG"
+    sed -i "s/^SHOW_INFO = .*/SHOW_INFO = False/" "$PI3D_CONFIG"
+
+    chown "$REAL_USER:$REAL_USER" "$PI3D_CONFIG"
+
+    echo -e "  ${GREEN}✓${NC} Ken Burns enabled (FPS=25, no info overlay)"
+else
+    echo -e "  ${YELLOW}⚠${NC} Config file not found at $PI3D_CONFIG"
+    echo "  You can configure manually after installation"
+fi
+
+echo ""
 # Step 4: Create directory structure
 echo -e "${BLUE}Step 4: Creating directory structure...${NC}"
 
@@ -345,18 +370,18 @@ else
 fi
 echo ""
 
-# Step 7.5: Install cage compositor
-echo -e "${BLUE}Step 7.5: Installing cage compositor...${NC}"
+# Step 7.5: Install OpenGL ES libraries
+echo -e "${BLUE}Step 7.5: Installing OpenGL ES libraries...${NC}"
 
-if ! dpkg -l | grep -q "^ii  cage "; then
-    echo "  Installing cage compositor and OpenGL ES..."
-    apt-get install -y cage libgles2
-    echo -e "  ${GREEN}✓${NC} cage and OpenGL ES installed"
+if ! dpkg -l | grep -q "libgles2"; then
+    echo "  Installing OpenGL ES libraries..."
+    apt-get install -y libgles2
+    echo -e "  ${GREEN}✓${NC} OpenGL ES installed"
 else
-    echo "  ℹ cage already installed"
+    echo "  ℹ OpenGL ES already installed"
 fi
 
-echo -e "${GREEN}✓${NC} cage compositor ready"
+echo -e "${GREEN}✓${NC} Graphics libraries ready"
 echo ""
 
 # Step 8: Install systemd service
@@ -379,20 +404,17 @@ if "$PYTHON_PATH" -c "import pi3d" &> /dev/null 2>&1 && [ -f "$PHOTOFRAME_SCRIPT
     echo "  ℹ Pi3D detected in $PYTHON_PATH"
     echo "  ℹ PictureFrame script found at $PHOTOFRAME_SCRIPT"
 
-    # Get user UID for XDG_RUNTIME_DIR (needed by cage)
-    USER_UID=$(id -u "$REAL_USER")
-
-    # Generate ExecStart for cage
-    EXEC_START="/usr/bin/cage -s -- $PYTHON_PATH $PHOTOFRAME_SCRIPT -p $PROCESSED_DIR"
-    echo "  ℹ Using cage compositor (Wayland kiosk mode)"
+    # Generate direct ExecStart (no compositor needed - DRM/KMS)
+    EXEC_START="$PYTHON_PATH $PHOTOFRAME_SCRIPT -p $PROCESSED_DIR"
+    echo "  ℹ Using direct DRM/KMS execution (headless mode)"
 
     # Generate service file with actual user, paths, and ExecStart
     sed -e "s|User=pi.*|User=$REAL_USER|g" \
         -e "s|Group=pi.*|Group=$REAL_USER|g" \
         -e "s|WorkingDirectory=/home/pi.*|WorkingDirectory=$PROCESSED_DIR|g" \
         -e "s|Environment=\"HOME=/home/pi\".*|Environment=\"HOME=$REAL_HOME\"|g" \
+        -e "s|Environment=\"PYTHONPATH=/home/pi/pi3d_demos\".*|Environment=\"PYTHONPATH=$REAL_HOME/pi3d_demos\"|g" \
         -e "s|/home/pi|$REAL_HOME|g" \
-        -e "s|__UID__|$USER_UID|g" \
         -e "s|__EXEC_START__|$EXEC_START|g" \
         "$PROJECT_DIR/systemd/photoframe.service" > /etc/systemd/system/photoframe.service
 
@@ -484,6 +506,28 @@ else
     echo -e "  ${YELLOW}⚠${NC} Could not find config.txt"
 fi
 
+
+# Force HDMI output for headless operation
+echo "  Configuring headless HDMI output..."
+
+CMDLINE_FILE="/boot/firmware/cmdline.txt"
+
+if [ -f "$CMDLINE_FILE" ]; then
+    # Check if video parameter already exists
+    if ! grep -q "video=HDMI-A-1:" "$CMDLINE_FILE"; then
+        # Backup original
+        cp "$CMDLINE_FILE" "$CMDLINE_FILE.backup"
+
+        # Add video parameter to end of line (must stay on same line)
+        sed -i "s/$/ video=HDMI-A-1:1920x1080@60D/" "$CMDLINE_FILE"
+        echo -e "  ${GREEN}✓${NC} HDMI output forced in cmdline.txt"
+        echo "  Note: Reboot required for this change to take effect"
+    else
+        echo "  ℹ HDMI output already configured"
+    fi
+else
+    echo -e "  ${YELLOW}⚠${NC} cmdline.txt not found at $CMDLINE_FILE"
+fi
 echo -e "   ${GREEN}✓${NC} Pi optimization complete"
 echo ""
 
@@ -495,21 +539,22 @@ sudo -u "$REAL_USER" "$SCRIPT_DIR/test_setup.sh" || true
 
 echo ""
 
-# Step 11: Boot mode configuration guidance
+# Step 11: Headless configuration guidance
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  📺 Boot Mode Configuration (IMPORTANT)"
+echo "  📺 Headless Configuration"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo -e "${YELLOW}For optimal cage performance:${NC}"
+echo -e "${YELLOW}IMPORTANT: Reboot required for HDMI force to take effect${NC}"
 echo ""
-echo "1. Run: sudo raspi-config"
-echo "2. Select: System Options → Boot / Auto Login"
-echo "3. Choose: Console Autologin (B2)"
-echo "4. Finish and reboot"
+echo "After reboot:"
+echo "  sudo systemctl start photoframe.service"
 echo ""
-echo "This boots to console (not desktop), saving ~33MB RAM."
-echo "The photoframe service will start automatically."
+echo "Monitor logs:"
+echo "  journalctl -u photoframe.service -f"
+echo ""
+echo "The photo frame will run in true headless mode using DRM/KMS."
+echo "No screen needed - GPU renders directly to framebuffer."
 echo ""
 
 echo -e "${GREEN}=============================================="

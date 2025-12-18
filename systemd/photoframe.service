@@ -1,9 +1,9 @@
-# Systemd Service Template for Photo Frame (cage compositor)
-# Optimized for Raspberry Pi OS Trixie with Wayland/KMS
+# Systemd Service Template for Photo Frame (Headless DRM/KMS)
+# Optimized for Raspberry Pi OS Trixie headless operation
 # Placeholders are replaced during installation by install.sh
 
 [Unit]
-Description=Raspberry Pi Photo Frame (Pi3D Slideshow)
+Description=Pi3D Photo Frame Headless (DRM/KMS)
 Documentation=https://github.com/frankCls/photo-frame
 After=network-online.target
 Wants=network-online.target
@@ -16,25 +16,17 @@ WorkingDirectory=/home/pi/photo-frame/processed_photos  # TEMPLATE
 
 # Environment variables
 Environment="HOME=/home/pi"  # TEMPLATE
-Environment="XDG_RUNTIME_DIR=/run/user/__UID__"  # TEMPLATE
+Environment="PYTHONPATH=/home/pi/pi3d_demos"  # TEMPLATE
 
-# TTY and PAM settings for hardware access
-PAMName=login
-TTYPath=/dev/tty1
-StandardInput=tty
-
-# Supplementary groups for GPU/KMS access
-SupplementaryGroups=video render input tty
-
-# Create XDG_RUNTIME_DIR if needed
-RuntimeDirectory=user/__UID__  # TEMPLATE
-
-# cage command: /usr/bin/cage -s -- python3 PictureFrame2020.py -p /photos
+# Direct Python execution (no compositor)
 ExecStart=__EXEC_START__  # TEMPLATE
+
+# GPU/KMS access permissions
+SupplementaryGroups=video render input tty
 
 # Restart on failure
 Restart=on-failure
-RestartSec=10s
+RestartSec=5s
 
 # Logging
 StandardOutput=journal
@@ -42,4 +34,4 @@ StandardError=journal
 SyslogIdentifier=photoframe
 
 [Install]
-WantedBy=graphical.target
+WantedBy=multi-user.target
