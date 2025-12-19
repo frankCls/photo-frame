@@ -415,7 +415,7 @@ if "$PYTHON_PATH" -c "import pi3d" &> /dev/null 2>&1 && [ -f "$PHOTOFRAME_SCRIPT
         -e "s|Environment=\"HOME=/home/pi\".*|Environment=\"HOME=$REAL_HOME\"|g" \
         -e "s|Environment=\"PYTHONPATH=/home/pi/pi3d_demos\".*|Environment=\"PYTHONPATH=$REAL_HOME/pi3d_demos\"|g" \
         -e "s|/home/pi|$REAL_HOME|g" \
-        -e "s|__EXEC_START__|$EXEC_START|g" \
+        -e "s|ExecStart=.*|ExecStart=$EXEC_START|g" \
         "$PROJECT_DIR/systemd/photoframe.service" > /etc/systemd/system/photoframe.service
 
     # Reload systemd
