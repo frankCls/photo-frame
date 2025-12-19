@@ -314,11 +314,16 @@ if [ -f "$PI3D_CONFIG" ]; then
     # Enable Ken Burns with optimized settings
     sed -i "s/^KENBURNS = .*/KENBURNS = True/" "$PI3D_CONFIG"
     sed -i "s/^FPS = .*/FPS = 25.0/" "$PI3D_CONFIG"
+
+    # Disable all text overlays (info, names, dates, metadata)
     sed -i "s/^SHOW_INFO = .*/SHOW_INFO = False/" "$PI3D_CONFIG"
+    sed -i "s/^SHOW_NAMES = .*/SHOW_NAMES = False/" "$PI3D_CONFIG"
+    sed -i "s/^SHOW_DATE = .*/SHOW_DATE = False/" "$PI3D_CONFIG"
+    sed -i "s/^SHOW_TEXT = .*/SHOW_TEXT = []/" "$PI3D_CONFIG"
 
     chown "$REAL_USER:$REAL_USER" "$PI3D_CONFIG"
 
-    echo -e "  ${GREEN}✓${NC} Ken Burns enabled (FPS=25, no info overlay)"
+    echo -e "  ${GREEN}✓${NC} Ken Burns enabled (FPS=25, all overlays disabled)"
 else
     echo -e "  ${YELLOW}⚠${NC} Config file not found at $PI3D_CONFIG"
     echo "  You can configure manually after installation"
