@@ -476,11 +476,8 @@ if "$PYTHON_PATH" -c "import pi3d" &> /dev/null 2>&1 && [ -f "$PHOTOFRAME_SCRIPT
     echo "  ℹ Pi3D detected in $PYTHON_PATH"
     echo "  ℹ PictureFrame script found at $PHOTOFRAME_SCRIPT"
 
-    # Config file path
-    PI3D_CONFIG_FILE="$REAL_HOME/pi3d_demos/PictureFrame2020config.py"
-
-    # Generate direct ExecStart with config and show_text args
-    EXEC_START="$PYTHON_PATH $PHOTOFRAME_SCRIPT -p $PROCESSED_DIR --config $PI3D_CONFIG_FILE --show_text \"\""
+    # Generate ExecStart with command-line flag overrides
+    EXEC_START="$PYTHON_PATH $PHOTOFRAME_SCRIPT -p $PROCESSED_DIR --show_text \"\" --blur_edges False --fit False --kenburns True"
     echo "  ℹ Using direct DRM/KMS execution (headless mode)"
 
     # Generate service file with actual user, paths, and ExecStart
