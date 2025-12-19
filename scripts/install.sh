@@ -97,6 +97,8 @@ PACKAGES=(
     rclone
     curl
     git
+    libsdl2-2.0-0
+    libsdl2-dev
 )
 
 for package in "${PACKAGES[@]}"; do
@@ -289,6 +291,31 @@ if [ -f "$PI3D_CONFIG" ]; then
 else
     echo -e "  ${YELLOW}⚠${NC} Config file not found at $PI3D_CONFIG"
     echo "  You can configure manually after installation"
+fi
+
+# Configure SDL2 backend for headless operation
+echo "  Configuring SDL2 backend for headless DRM/KMS..."
+
+PICTURE_FRAME_SCRIPT="$REAL_HOME/pi3d_demos/PictureFrame2020.py"
+
+if [ -f "$PICTURE_FRAME_SCRIPT" ]; then
+    # Check if use_sdl2 is already set
+    if ! grep -q "use_sdl2=True" "$PICTURE_FRAME_SCRIPT"; then
+        # Backup original
+        cp "$PICTURE_FRAME_SCRIPT" "$PICTURE_FRAME_SCRIPT.backup" 2>/dev/null || true
+
+        # Find the Display.create line and add use_sdl2=True
+        # This handles multiline Display.create() calls
+        sed -i '/DISPLAY = pi3d.Display.create(/,/)/ {
+            /)/s/)/, use_sdl2=True)/
+        }' "$PICTURE_FRAME_SCRIPT"
+
+        echo -e "  ${GREEN}✓${NC} SDL2 backend enabled in PictureFrame2020.py"
+    else
+        echo "  ℹ SDL2 backend already enabled"
+    fi
+else
+    echo -e "  ${YELLOW}⚠${NC} PictureFrame2020.py not found"
 fi
 
 echo ""

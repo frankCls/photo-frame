@@ -17,6 +17,9 @@ WorkingDirectory=/home/pi/photo-frame/processed_photos  # TEMPLATE
 # Environment variables
 Environment="HOME=/home/pi"  # TEMPLATE
 Environment="PYTHONPATH=/home/pi/pi3d_demos"  # TEMPLATE
+Environment="SDL_VIDEODRIVER=kmsdrm"
+Environment="LANG=en_US.UTF-8"
+Environment="LC_ALL=en_US.UTF-8"
 
 # Direct Python execution (no compositor)
 ExecStart=__EXEC_START__  # TEMPLATE
