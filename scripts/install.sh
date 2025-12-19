@@ -134,27 +134,30 @@ echo ""
 # Step 2.2: Create /home/pi symlink for Pi3D demos compatibility
 echo -e "${BLUE}Step 2.2: Configuring path compatibility...${NC}"
 
-# Check if we're NOT user 'pi' and /home/pi doesn't exist or isn't our home
-if [ "$REAL_USER" != "pi" ] && [ ! -L "/home/pi" ]; then
-    if [ -d "/home/pi" ]; then
-        echo -e "  ${YELLOW}⚠${NC} /home/pi directory exists (different user)"
-        echo "  Skipping symlink creation to avoid conflicts"
-    else
-        echo "  Creating /home/pi symlink for Pi3D demos compatibility..."
-        ln -s "$REAL_HOME" /home/pi
-        echo -e "  ${GREEN}✓${NC} /home/pi → $REAL_HOME"
-        echo "  This allows Pi3D demos to work with their hardcoded /home/pi paths"
-    fi
-elif [ "$REAL_USER" = "pi" ]; then
+if [ "$REAL_USER" = "pi" ]; then
     echo "  ℹ Running as user 'pi', no symlink needed"
 elif [ -L "/home/pi" ]; then
-    # Check if symlink points to correct location
+    # Symlink already exists - verify target
     CURRENT_TARGET=$(readlink /home/pi)
     if [ "$CURRENT_TARGET" = "$REAL_HOME" ]; then
         echo "  ℹ /home/pi symlink already configured correctly"
     else
-        echo -e "  ${YELLOW}⚠${NC} /home/pi points to $CURRENT_TARGET (not $REAL_HOME)"
+        echo -e "  ${YELLOW}⚠${NC} /home/pi symlink points to wrong location, recreating..."
+        rm -f /home/pi
+        ln -s "$REAL_HOME" /home/pi
+        echo -e "  ${GREEN}✓${NC} /home/pi → $REAL_HOME (fixed)"
     fi
+else
+    # Directory exists or doesn't exist - remove and create symlink
+    if [ -d "/home/pi" ] || [ -e "/home/pi" ]; then
+        echo "  Removing existing /home/pi..."
+        rm -rf /home/pi
+    fi
+
+    echo "  Creating /home/pi symlink for Pi3D demos compatibility..."
+    ln -s "$REAL_HOME" /home/pi
+    echo -e "  ${GREEN}✓${NC} /home/pi → $REAL_HOME"
+    echo "  Pi3D hardcoded paths will now work correctly"
 fi
 
 echo ""
