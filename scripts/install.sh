@@ -131,6 +131,34 @@ done
 echo -e "${GREEN}✓${NC} User permissions configured"
 echo ""
 
+# Step 2.2: Create /home/pi symlink for Pi3D demos compatibility
+echo -e "${BLUE}Step 2.2: Configuring path compatibility...${NC}"
+
+# Check if we're NOT user 'pi' and /home/pi doesn't exist or isn't our home
+if [ "$REAL_USER" != "pi" ] && [ ! -L "/home/pi" ]; then
+    if [ -d "/home/pi" ]; then
+        echo -e "  ${YELLOW}⚠${NC} /home/pi directory exists (different user)"
+        echo "  Skipping symlink creation to avoid conflicts"
+    else
+        echo "  Creating /home/pi symlink for Pi3D demos compatibility..."
+        ln -s "$REAL_HOME" /home/pi
+        echo -e "  ${GREEN}✓${NC} /home/pi → $REAL_HOME"
+        echo "  This allows Pi3D demos to work with their hardcoded /home/pi paths"
+    fi
+elif [ "$REAL_USER" = "pi" ]; then
+    echo "  ℹ Running as user 'pi', no symlink needed"
+elif [ -L "/home/pi" ]; then
+    # Check if symlink points to correct location
+    CURRENT_TARGET=$(readlink /home/pi)
+    if [ "$CURRENT_TARGET" = "$REAL_HOME" ]; then
+        echo "  ℹ /home/pi symlink already configured correctly"
+    else
+        echo -e "  ${YELLOW}⚠${NC} /home/pi points to $CURRENT_TARGET (not $REAL_HOME)"
+    fi
+fi
+
+echo ""
+
 # Step 2.5: Create virtual environment for Pi3D
 echo -e "${BLUE}Step 2.5: Setting up Python virtual environment...${NC}"
 
