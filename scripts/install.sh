@@ -315,6 +315,15 @@ if [ -f "$PI3D_CONFIG" ]; then
     sed -i "s/^KENBURNS = .*/KENBURNS = True/" "$PI3D_CONFIG"
     sed -i "s/^FPS = .*/FPS = 25.0/" "$PI3D_CONFIG"
 
+    # Disable blur edges and fit (conflicts with Ken Burns)
+    sed -i "s/^BLUR_EDGES = .*/BLUR_EDGES = False/" "$PI3D_CONFIG"
+    sed -i "s/^FIT = .*/FIT = False/" "$PI3D_CONFIG"
+
+    # Set Ken Burns zoom depth for noticeable effect
+    if ! grep -q "^kb_depth = " "$PI3D_CONFIG"; then
+        echo "kb_depth = 0.15  # 15% zoom for noticeable Ken Burns effect" >> "$PI3D_CONFIG"
+    fi
+
     # Disable all text overlays (info, names, dates, metadata)
     sed -i "s/^SHOW_INFO = .*/SHOW_INFO = False/" "$PI3D_CONFIG"
     sed -i "s/^SHOW_NAMES = .*/SHOW_NAMES = False/" "$PI3D_CONFIG"
@@ -323,7 +332,7 @@ if [ -f "$PI3D_CONFIG" ]; then
 
     chown "$REAL_USER:$REAL_USER" "$PI3D_CONFIG"
 
-    echo -e "  ${GREEN}✓${NC} Ken Burns enabled (FPS=25, all overlays disabled)"
+    echo -e "  ${GREEN}✓${NC} Ken Burns enabled (FPS=25, 15% zoom, no blur/fit, no overlays)"
 else
     echo -e "  ${YELLOW}⚠${NC} Config file not found at $PI3D_CONFIG"
     echo "  You can configure manually after installation"
@@ -467,8 +476,11 @@ if "$PYTHON_PATH" -c "import pi3d" &> /dev/null 2>&1 && [ -f "$PHOTOFRAME_SCRIPT
     echo "  ℹ Pi3D detected in $PYTHON_PATH"
     echo "  ℹ PictureFrame script found at $PHOTOFRAME_SCRIPT"
 
-    # Generate direct ExecStart (no compositor needed - DRM/KMS)
-    EXEC_START="$PYTHON_PATH $PHOTOFRAME_SCRIPT -p $PROCESSED_DIR"
+    # Config file path
+    PI3D_CONFIG_FILE="$REAL_HOME/pi3d_demos/PictureFrame2020config.py"
+
+    # Generate direct ExecStart with config and show_text args
+    EXEC_START="$PYTHON_PATH $PHOTOFRAME_SCRIPT -p $PROCESSED_DIR --config $PI3D_CONFIG_FILE --show_text \"\""
     echo "  ℹ Using direct DRM/KMS execution (headless mode)"
 
     # Generate service file with actual user, paths, and ExecStart
