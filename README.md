@@ -1,10 +1,10 @@
 # Raspberry Pi Photo Frame
 
-A smart, remote-managed digital photo frame powered by Raspberry Pi Zero 2 W with automatic Google Drive sync, intelligent image processing, and stunning Ken Burns cinematic zoom effects.
+A smart, remote-managed digital photo frame powered by Raspberry Pi Zero 2 W with automatic Dropbox sync, intelligent image processing, and stunning Ken Burns cinematic zoom effects.
 
 ## Features
 
-- **Automatic Cloud Sync**: Photos uploaded to Google Drive automatically appear on your frame
+- **Automatic Cloud Sync**: Photos uploaded to Dropbox automatically appear on your frame
 - **Smart Image Processing**:
   - Landscape photos: Intelligently cropped to fill the screen
   - Portrait photos: Displayed with artistic blurred backgrounds (no black bars!)
@@ -13,7 +13,7 @@ A smart, remote-managed digital photo frame powered by Raspberry Pi Zero 2 W wit
 - **One-Command Installation**: Automated setup script handles everything
 - **Auto-Start on Boot**: Systemd service ensures slideshow starts automatically
 - **Optimized for Pi Zero 2 W**: Low-memory footprint with WiFi stability optimizations
-- **Family-Friendly**: Easy for family members to share photos - just upload to Google Drive!
+- **Family-Friendly**: Easy for family members to share photos - just upload to Dropbox!
 
 ## Hardware Requirements
 
@@ -70,11 +70,11 @@ The installer will:
 - Install system dependencies (rclone, Python packages)
 - Create directory structure
 - Set up automatic syncing
-- Optionally help configure Google Drive access
+- Optionally help configure Dropbox access
 - Generate and install systemd service for auto-start
 - Optimize Pi settings
 
-**Note on Google Drive Setup:** For headless Pi setups (no browser), it's easiest to configure rclone on your Mac/PC first, then copy the config file to the Pi. See the [detailed setup guide](SETUP_PI.md#4-configure-google-drive) for complete instructions. The installer will prompt you to configure rclone, or you can skip and do it separately.
+**Note on Dropbox Setup:** For headless Pi setups (no browser), it's easiest to configure rclone on your Mac/PC first, then copy the config file to the Pi. See the [detailed setup guide](SETUP_PI.md#4-configure-google-drive) for complete instructions. The installer will prompt you to configure rclone, or you can skip and do it separately.
 
 ### 5. Reboot
 
@@ -99,7 +99,7 @@ After reboot, your photo frame will:
 │   ├── scripts/
 │   │   ├── install.sh            # Main installer
 │   │   ├── sync.sh               # Sync script (runs via cron)
-│   │   ├── setup_rclone.sh       # Google Drive setup helper
+│   │   ├── setup_rclone.sh       # Dropbox setup helper
 │   │   ├── test_setup.sh         # Verification script
 │   │   └── uninstall.sh          # Clean removal
 │   ├── systemd/
@@ -108,7 +108,7 @@ After reboot, your photo frame will:
 │   └── requirements.txt
 │
 └── photo-frame/               # Created during install
-    ├── raw_photos/                # Synced from Google Drive
+    ├── raw_photos/                # Synced from Dropbox
     ├── processed_photos/          # Resized for display (Pi3D source)
     └── logs/
         └── sync.log
@@ -117,7 +117,7 @@ After reboot, your photo frame will:
 ### Data Flow
 
 ```
-Google Drive Folder
+Dropbox Folder
        ↓
    [rclone sync]
        ↓
@@ -187,19 +187,19 @@ resampling = LANCZOS      # LANCZOS, BILINEAR, or BICUBIC
 ```ini
 [Sync]
 sync_interval = 15                        # Minutes between syncs
-gdrive_remote = gdrive:PhotoFrame_Uploads # Format: remote_name:folder_path
+gdrive_remote = photoframe:PhotoFrame_Uploads # Format: remote_name:folder_path
 ```
 
 **Understanding `gdrive_remote` format:**
 - Format: `remote_name:folder_path`
 - `remote_name` = the name you gave your rclone remote during configuration
-- `folder_path` = the folder within Google Drive to sync from
+- `folder_path` = the folder within Dropbox to sync from
 
 **Examples:**
 ```ini
-gdrive_remote = gdrive:PhotoFrame_Uploads    # Remote "gdrive", folder "PhotoFrame_Uploads"
+gdrive_remote = photoframe:PhotoFrame_Uploads    # Remote "gdrive", folder "PhotoFrame_Uploads"
 gdrive_remote = mygdrive:Family/Photos       # Remote "mygdrive", folder "Family/Photos"
-gdrive_remote = gdrive:                      # Remote "gdrive", root of Google Drive
+gdrive_remote = gdrive:                      # Remote "gdrive", root of Dropbox
 ```
 
 **To find your remote name:** Run `rclone listremotes` on your Pi after configuration.
@@ -225,7 +225,7 @@ low_level_retries = 10     # WiFi stability
 
 ### Adding Photos
 
-1. **Share the Google Drive folder** with family members
+1. **Share the Dropbox folder** with family members
 2. **Upload photos** to the shared folder
 3. **Wait for sync** (default: every 15 minutes)
 4. **Photos appear automatically** on the frame
@@ -292,7 +292,7 @@ sudo ~/photoframe/scripts/install.sh  # Re-run installer
 
 #### Sync Not Working
 - Check internet: `ping google.com`
-- Test rclone: `rclone lsd gdrive:`
+- Test rclone: `rclone lsd photoframe:`
 - View logs: `tail -50 ~/photo-frame/logs/sync.log`
 - Verify cron: `crontab -l`
 

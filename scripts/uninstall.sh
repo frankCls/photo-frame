@@ -116,14 +116,14 @@ echo ""
 echo "Rclone configuration:"
 if command -v rclone &> /dev/null; then
     if [ -f "$CONFIG_FILE" ]; then
-        GDRIVE_REMOTE=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$CONFIG_FILE'); print(c.get('Sync','gdrive_remote'))" 2>/dev/null | cut -d: -f1)
+        DROPBOX_REMOTE=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$CONFIG_FILE'); print(c.get('Sync','gdrive_remote'))" 2>/dev/null | cut -d: -f1)
 
-        if [ -n "$GDRIVE_REMOTE" ] && rclone listremotes | grep -q "^${GDRIVE_REMOTE}:$"; then
-            echo "Found rclone remote: $GDRIVE_REMOTE"
+        if [ -n "$DROPBOX_REMOTE" ] && rclone listremotes | grep -q "^${DROPBOX_REMOTE}:$"; then
+            echo "Found rclone remote: $DROPBOX_REMOTE"
             read -p "Do you want to remove this rclone remote? (y/n): " DELETE_RCLONE
 
             if [[ $DELETE_RCLONE =~ ^[Yy]$ ]]; then
-                rclone config delete "$GDRIVE_REMOTE"
+                rclone config delete "$DROPBOX_REMOTE"
                 echo "✓ Rclone remote removed"
             else
                 echo "ℹ Rclone remote preserved"

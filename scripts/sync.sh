@@ -1,11 +1,11 @@
 #!/bin/bash
 #
 # Raspberry Pi Photo Frame - Sync Script
-# Syncs photos from Google Drive and processes them for display
+# Syncs photos from Dropbox and processes them for display
 #
 # This script:
 # 1. Prevents concurrent executions (PID lock)
-# 2. Syncs photos from Google Drive using rclone (optimized for Pi Zero 2 W)
+# 2. Syncs photos from Dropbox using rclone (optimized for Pi Zero 2 W)
 # 3. Processes new images with Python script
 # 4. Logs all operations
 #
@@ -58,7 +58,7 @@ echo $$ > "$LOCKFILE"
 trap "rm -f $LOCKFILE" EXIT
 
 # Load configuration
-GDRIVE_REMOTE=$(read_config "Sync" "gdrive_remote" "gdrive:PhotoFrame_Uploads")
+DROPBOX_REMOTE=$(read_config "Sync" "gdrive_remote" "photoframe:PhotoFrame_Uploads")
 RAW_DIR=$(read_config "Paths" "raw_photos_dir" "$HOME/photo-frame/raw_photos")
 LOG_FILE=$(read_config "Paths" "log_file" "$HOME/photo-frame/logs/sync.log")
 TRANSFERS=$(read_config "RcloneOptions" "transfers" "2")
@@ -78,16 +78,16 @@ log() {
 
 log "=========================================="
 log "Starting photo sync and processing"
-log "Remote: $GDRIVE_REMOTE"
+log "Remote: $DROPBOX_REMOTE"
 log "Local: $RAW_DIR"
 
 # Check if rclone is configured
-if ! rclone listremotes | grep -q "^$(echo $GDRIVE_REMOTE | cut -d: -f1):$"; then
+if ! rclone listremotes | grep -q "^$(echo $DROPBOX_REMOTE | cut -d: -f1):$"; then
     log "ERROR: rclone remote not configured. Run: ./scripts/setup_rclone.sh"
     exit 1
 fi
 
-# Sync from Google Drive
+# Sync from Dropbox
 # Optimized for Raspberry Pi Zero 2 W (512MB RAM):
 # --transfers: Limit concurrent downloads to reduce memory usage
 # --checkers: Limit file comparisons to reduce CPU load
@@ -97,7 +97,7 @@ fi
 
 log "Starting rclone sync..."
 
-if rclone sync "$GDRIVE_REMOTE" "$RAW_DIR" \
+if rclone sync "$DROPBOX_REMOTE" "$RAW_DIR" \
     --transfers "$TRANSFERS" \
     --checkers "$CHECKERS" \
     --low-level-retries "$RETRIES" \

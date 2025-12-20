@@ -545,7 +545,7 @@ The installer will:
 
 Follow the on-screen prompts.
 
-### 4. Configure Google Drive
+### 4. Configure Dropbox
 
 **Recommended Method: Configure on Your Computer First**
 
@@ -559,14 +559,14 @@ brew install rclone
 
 # Or download from https://rclone.org/downloads/ for Windows/Linux
 
-# Configure Google Drive
+# Configure Dropbox
 rclone config
 ```
 
 Follow the prompts:
 - Choose **n** (new remote)
 - Name: **gdrive**
-- Storage: Type number for **drive** (Google Drive)
+- Storage: Type number for **drive** (Dropbox)
 - Client ID: Press **Enter** (leave blank)
 - Client Secret: Press **Enter** (leave blank)
 - Scope: Type **1** (full access)
@@ -581,7 +581,7 @@ Follow the prompts:
 
 ```bash
 # Verify it works
-rclone lsd gdrive:
+rclone lsd photoframe:
 
 # Find config location
 rclone config file
@@ -595,7 +595,7 @@ scp ~/.config/rclone/rclone.conf pi@<pi-ip>:~/.config/rclone/
 
 ```bash
 # Verify connection works
-rclone lsd gdrive:
+rclone lsd photoframe:
 
 # Run setup script to configure the folder
 ./scripts/setup_rclone.sh
@@ -607,16 +607,16 @@ The script will detect the existing remote and help you set up the upload folder
 
 After setup, `photoframe_config.ini` will contain:
 ```ini
-gdrive_remote = gdrive:PhotoFrame_Uploads
+gdrive_remote = photoframe:PhotoFrame_Uploads
 ```
 
 **Format:** `remote_name:folder_path`
 - `remote_name` = the name you chose during `rclone config` (e.g., "gdrive")
-- `folder_path` = the Google Drive folder to sync from (e.g., "PhotoFrame_Uploads")
+- `folder_path` = the Dropbox folder to sync from (e.g., "PhotoFrame_Uploads")
 
 **Examples:**
 ```ini
-gdrive_remote = gdrive:PhotoFrame_Uploads    # Remote "gdrive", folder "PhotoFrame_Uploads"
+gdrive_remote = photoframe:PhotoFrame_Uploads    # Remote "gdrive", folder "PhotoFrame_Uploads"
 gdrive_remote = mygdrive:Family/Photos       # Remote "mygdrive", nested folder
 gdrive_remote = gdrive:                      # Remote "gdrive", root of Drive
 ```
@@ -706,7 +706,7 @@ python3 PictureFrame2020.py ~/photo-frame/processed_photos
 ### Sync Not Working
 
 1. Check rclone config: `rclone listremotes`
-2. Test connection: `rclone lsd gdrive:`
+2. Test connection: `rclone lsd photoframe:`
 3. Check cron: `crontab -l`
 4. View logs: `tail -50 ~/photo-frame/logs/sync.log`
 
@@ -814,7 +814,7 @@ sudo systemctl start photoframe.service
 
 Your photo frame is now ready!
 
-1. **Share the Google Drive folder** with family members
+1. **Share the Dropbox folder** with family members
 2. **Upload some photos** to test
 3. **Enjoy your smart photo frame!**
 

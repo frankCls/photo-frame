@@ -74,14 +74,14 @@ if command -v rclone &> /dev/null; then
 
     # Test 3a: rclone configuration
     if [ -f "$CONFIG_FILE" ]; then
-        GDRIVE_REMOTE=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$CONFIG_FILE'); print(c.get('Sync','gdrive_remote'))" 2>/dev/null)
-        REMOTE_NAME=$(echo "$GDRIVE_REMOTE" | cut -d: -f1)
+        DROPBOX_REMOTE=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$CONFIG_FILE'); print(c.get('Sync','gdrive_remote'))" 2>/dev/null)
+        REMOTE_NAME=$(echo "$DROPBOX_REMOTE" | cut -d: -f1)
 
         if rclone listremotes | grep -q "^${REMOTE_NAME}:$"; then
             test_result "PASS" "rclone remote '$REMOTE_NAME' configured"
 
             # Test connection
-            if rclone lsd "$GDRIVE_REMOTE" > /dev/null 2>&1; then
+            if rclone lsd "$DROPBOX_REMOTE" > /dev/null 2>&1; then
                 test_result "PASS" "Google Drive connection working"
             else
                 test_result "WARN" "Cannot connect to Google Drive" "Check internet connection or run: ./scripts/setup_rclone.sh"

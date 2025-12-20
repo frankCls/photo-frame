@@ -1,13 +1,13 @@
 #!/bin/bash
 #
 # Raspberry Pi Photo Frame - Rclone Setup Helper
-# Interactive wizard to configure Google Drive access
+# Interactive wizard to configure Dropbox access
 #
 
 set -e
 
 echo "=============================================="
-echo "  Photo Frame - Google Drive Setup"
+echo "  Photo Frame - Dropbox Setup"
 echo "=============================================="
 echo ""
 
@@ -18,7 +18,7 @@ if ! command -v rclone &> /dev/null; then
     exit 1
 fi
 
-echo "This wizard will help you configure Google Drive access for your photo frame."
+echo "This wizard will help you configure Dropbox access for your photo frame."
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  HEADLESS CONFIGURATION NOTICE"
@@ -29,7 +29,7 @@ echo ""
 echo "Option 1: Configure on your computer, then copy config (EASIEST)"
 echo "  1. On your Mac/PC: brew install rclone (or download from rclone.org)"
 echo "  2. Run: rclone config"
-echo "  3. Set up Google Drive following the prompts"
+echo "  3. Set up Dropbox following the prompts"
 echo "  4. Find config: rclone config file"
 echo "  5. Copy to Pi: scp ~/.config/rclone/rclone.conf pi@<pi-ip>:~/.config/rclone/"
 echo "  6. Then run this script again"
@@ -38,7 +38,7 @@ echo "Option 2: Configure here in headless mode"
 echo "  1. Run rclone config on this Pi"
 echo "  2. When you see a URL (http://127.0.0.1:53682/...), COPY IT"
 echo "  3. Paste URL into browser on your Mac/PC"
-echo "  4. Authorize Google Drive"
+echo "  4. Authorize Dropbox"
 echo "  5. Copy the authorization code shown"
 echo "  6. Paste it back into the Pi terminal"
 echo ""
@@ -46,10 +46,10 @@ read -p "Press Enter to continue with Option 2, or Ctrl+C to use Option 1..."
 
 # Get desired remote name
 echo ""
-echo "First, choose a name for your Google Drive connection."
-echo "Default: gdrive"
-read -p "Remote name [gdrive]: " REMOTE_NAME
-REMOTE_NAME=${REMOTE_NAME:-gdrive}
+echo "First, choose a name for your Dropbox connection."
+echo "Default: photoframe"
+read -p "Remote name [photoframe]: " REMOTE_NAME
+REMOTE_NAME=${REMOTE_NAME:-photoframe}
 
 # Check if remote already exists
 if rclone listremotes | grep -q "^${REMOTE_NAME}:$"; then
@@ -70,22 +70,19 @@ echo "Please follow these steps:"
 echo ""
 echo "1. Type: n (for new remote)"
 echo "2. Name: $REMOTE_NAME"
-echo "3. Storage: Type the number for 'drive' (Google Drive)"
+echo "3. Storage: Type the number for 'dropbox' (Dropbox)"
 echo "4. Client ID: Press Enter (leave blank)"
 echo "5. Client Secret: Press Enter (leave blank)"
-echo "6. Scope: Type 1 (full access)"
-echo "7. Root folder ID: Press Enter (leave blank)"
-echo "8. Service Account: Press Enter (leave blank)"
-echo "9. Edit advanced config: n"
-echo "10. Use auto config: n (IMPORTANT: type 'n' for headless)"
+echo "6. Edit advanced config: n"
+echo "7. Use auto config: n (IMPORTANT: type 'n' for headless)"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  IMPORTANT: After step 10, you'll see a URL"
+echo "  IMPORTANT: After step 7, you'll see a URL"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  1. COPY the URL that starts with http://127.0.0.1:53682/"
 echo "  2. Open it in a browser ON YOUR MAC/PC (not the Pi)"
-echo "  3. Log into Google and authorize rclone"
-echo "  4. Google will show you a code - COPY IT"
+echo "  3. Log into Dropbox and authorize rclone"
+echo "  4. Dropbox will show you a code - COPY IT"
 echo "  5. PASTE the code back here in the Pi terminal"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
@@ -99,7 +96,7 @@ rclone config
 
 # Verify setup
 echo ""
-echo "Verifying Google Drive connection..."
+echo "Verifying Dropbox connection..."
 
 if rclone listremotes | grep -q "^${REMOTE_NAME}:$"; then
     echo "✓ Remote '$REMOTE_NAME' configured successfully"
@@ -110,7 +107,7 @@ if rclone listremotes | grep -q "^${REMOTE_NAME}:$"; then
 
         # List top-level folders
         echo ""
-        echo "Available folders in your Google Drive:"
+        echo "Available folders in your Dropbox:"
         rclone lsd "${REMOTE_NAME}:"
         echo ""
 
@@ -156,7 +153,7 @@ with open('$CONFIG_FILE', 'w') as f:
         echo "  Setup Complete!"
         echo "=============================================="
         echo ""
-        echo "Google Drive remote: $FULL_REMOTE"
+        echo "Dropbox remote: $FULL_REMOTE"
         echo ""
         echo "Next steps:"
         echo "1. Share the '$FOLDER_NAME' folder with family members"

@@ -10,7 +10,7 @@ The solution prioritizes performance and aesthetics, balancing the limited resou
 | :---- | :---- | :---- |
 | **Hardware** | Raspberry Pi Zero 2 W | Resource constraint (512MB RAM) requires lightweight solutions. |
 | **Screen Resolution** | **1366 x 768** (16:9 Aspect Ratio) | All final images must be processed to this exact size. |
-| **Upload Source** | Google Drive Shared Folder | Remote contribution mechanism (simple for family). |
+| **Upload Source** | Dropbox Shared Folder | Remote contribution mechanism (simple for family). |
 | **Synchronization** | **rclone** (via Cron job) | Automated, reliable, low-resource cloud syncing utility. |
 | **Preprocessing** | **Python (Pillow Library)** | Handles image resizing, cropping, and the advanced aesthetic composition. |
 | **Display Viewer** | **Pi3D PictureFrame** | GPU-accelerated application for smooth **Ken Burns (Cinematic Zoom)** transitions. |
@@ -79,8 +79,8 @@ exit 1
 fi
 
 LOG\_FILE="/var/log/photoframe\_sync.log"  
-\# NOTE: Replace 'gdrive:PhotoFrame\_Uploads' with your actual Rclone remote name and folder path.  
-GDRIVE\_REMOTE="gdrive:PhotoFrame\_Uploads"   
+\# NOTE: Replace 'photoframe:PhotoFrame\_Uploads' with your actual Rclone remote name and folder path.  
+GDRIVE\_REMOTE="photoframe:PhotoFrame\_Uploads"   
 LOCAL\_RAW\_DIR="/home/pi/raw\_photos"
 
 echo "--- $(date) \---" \>\> "$LOG\_FILE"

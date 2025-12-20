@@ -97,8 +97,6 @@ PACKAGES=(
     rclone
     curl
     git
-    libsdl2-2.0-0
-    libsdl2-dev
 )
 
 for package in "${PACKAGES[@]}"; do
@@ -129,37 +127,6 @@ for group in $REQUIRED_GROUPS; do
 done
 
 echo -e "${GREEN}✓${NC} User permissions configured"
-echo ""
-
-# Step 2.2: Create /home/pi symlink for Pi3D demos compatibility
-echo -e "${BLUE}Step 2.2: Configuring path compatibility...${NC}"
-
-if [ "$REAL_USER" = "pi" ]; then
-    echo "  ℹ Running as user 'pi', no symlink needed"
-elif [ -L "/home/pi" ]; then
-    # Symlink already exists - verify target
-    CURRENT_TARGET=$(readlink /home/pi)
-    if [ "$CURRENT_TARGET" = "$REAL_HOME" ]; then
-        echo "  ℹ /home/pi symlink already configured correctly"
-    else
-        echo -e "  ${YELLOW}⚠${NC} /home/pi symlink points to wrong location, recreating..."
-        rm -f /home/pi
-        ln -s "$REAL_HOME" /home/pi
-        echo -e "  ${GREEN}✓${NC} /home/pi → $REAL_HOME (fixed)"
-    fi
-else
-    # Directory exists or doesn't exist - remove and create symlink
-    if [ -d "/home/pi" ] || [ -e "/home/pi" ]; then
-        echo "  Removing existing /home/pi..."
-        rm -rf /home/pi
-    fi
-
-    echo "  Creating /home/pi symlink for Pi3D demos compatibility..."
-    ln -s "$REAL_HOME" /home/pi
-    echo -e "  ${GREEN}✓${NC} /home/pi → $REAL_HOME"
-    echo "  Pi3D hardcoded paths will now work correctly"
-fi
-
 echo ""
 
 # Step 2.5: Create virtual environment for Pi3D
@@ -300,70 +267,6 @@ fi
 echo -e "   ${GREEN}✓${NC} Pi3D demos ready"
 echo ""
 
-# Step 3.8: Configure PictureFrame2020 for Pi Zero 2W
-echo -e "${BLUE}Step 3.8: Configuring Ken Burns effects...${NC}"
-
-PI3D_CONFIG="$REAL_HOME/pi3d_demos/PictureFrame2020config.py"
-
-if [ -f "$PI3D_CONFIG" ]; then
-    echo "  Optimizing for Pi Zero 2W (512MB RAM)..."
-
-    # Backup original
-    cp "$PI3D_CONFIG" "$PI3D_CONFIG.backup" 2>/dev/null || true
-
-    # Enable Ken Burns with optimized settings
-    sed -i "s/^KENBURNS = .*/KENBURNS = True/" "$PI3D_CONFIG"
-    sed -i "s/^FPS = .*/FPS = 25.0/" "$PI3D_CONFIG"
-
-    # Disable blur edges and fit (conflicts with Ken Burns)
-    sed -i "s/^BLUR_EDGES = .*/BLUR_EDGES = False/" "$PI3D_CONFIG"
-    sed -i "s/^FIT = .*/FIT = False/" "$PI3D_CONFIG"
-
-    # Set Ken Burns zoom depth for noticeable effect
-    if ! grep -q "^kb_depth = " "$PI3D_CONFIG"; then
-        echo "kb_depth = 0.15  # 15% zoom for noticeable Ken Burns effect" >> "$PI3D_CONFIG"
-    fi
-
-    # Disable all text overlays (info, names, dates, metadata)
-    sed -i "s/^SHOW_INFO = .*/SHOW_INFO = False/" "$PI3D_CONFIG"
-    sed -i "s/^SHOW_NAMES = .*/SHOW_NAMES = False/" "$PI3D_CONFIG"
-    sed -i "s/^SHOW_DATE = .*/SHOW_DATE = False/" "$PI3D_CONFIG"
-    sed -i "s/^SHOW_TEXT = .*/SHOW_TEXT = []/" "$PI3D_CONFIG"
-
-    chown "$REAL_USER:$REAL_USER" "$PI3D_CONFIG"
-
-    echo -e "  ${GREEN}✓${NC} Ken Burns enabled (FPS=25, 15% zoom, no blur/fit, no overlays)"
-else
-    echo -e "  ${YELLOW}⚠${NC} Config file not found at $PI3D_CONFIG"
-    echo "  You can configure manually after installation"
-fi
-
-# Configure SDL2 backend for headless operation
-echo "  Configuring SDL2 backend for headless DRM/KMS..."
-
-PICTURE_FRAME_SCRIPT="$REAL_HOME/pi3d_demos/PictureFrame2020.py"
-
-if [ -f "$PICTURE_FRAME_SCRIPT" ]; then
-    # Check if use_sdl2 is already set
-    if ! grep -q "use_sdl2=True" "$PICTURE_FRAME_SCRIPT"; then
-        # Backup original
-        cp "$PICTURE_FRAME_SCRIPT" "$PICTURE_FRAME_SCRIPT.backup" 2>/dev/null || true
-
-        # Find the Display.create line and add use_sdl2=True
-        # This handles multiline Display.create() calls
-        sed -i '/DISPLAY = pi3d.Display.create(/,/)/ {
-            /)/s/)/, use_sdl2=True)/
-        }' "$PICTURE_FRAME_SCRIPT"
-
-        echo -e "  ${GREEN}✓${NC} SDL2 backend enabled in PictureFrame2020.py"
-    else
-        echo "  ℹ SDL2 backend already enabled"
-    fi
-else
-    echo -e "  ${YELLOW}⚠${NC} PictureFrame2020.py not found"
-fi
-
-echo ""
 # Step 4: Create directory structure
 echo -e "${BLUE}Step 4: Creating directory structure...${NC}"
 
@@ -476,18 +379,21 @@ if "$PYTHON_PATH" -c "import pi3d" &> /dev/null 2>&1 && [ -f "$PHOTOFRAME_SCRIPT
     echo "  ℹ Pi3D detected in $PYTHON_PATH"
     echo "  ℹ PictureFrame script found at $PHOTOFRAME_SCRIPT"
 
-    # Generate ExecStart with command-line flag overrides
-    EXEC_START="$PYTHON_PATH $PHOTOFRAME_SCRIPT -p $PROCESSED_DIR --show_text \"\" --blur_edges False --fit False --kenburns True --fit_portrait False"
-    echo "  ℹ Using direct DRM/KMS execution (headless mode)"
+    # Get user UID for XDG_RUNTIME_DIR (needed by cage)
+    USER_UID=$(id -u "$REAL_USER")
+
+    # Generate ExecStart for cage
+    EXEC_START="/usr/bin/cage -s -- $PYTHON_PATH $PHOTOFRAME_SCRIPT -p $PROCESSED_DIR"
+    echo "  ℹ Using cage compositor (Wayland kiosk mode)"
 
     # Generate service file with actual user, paths, and ExecStart
     sed -e "s|User=pi.*|User=$REAL_USER|g" \
         -e "s|Group=pi.*|Group=$REAL_USER|g" \
         -e "s|WorkingDirectory=/home/pi.*|WorkingDirectory=$PROCESSED_DIR|g" \
         -e "s|Environment=\"HOME=/home/pi\".*|Environment=\"HOME=$REAL_HOME\"|g" \
-        -e "s|Environment=\"PYTHONPATH=/home/pi/pi3d_demos\".*|Environment=\"PYTHONPATH=$REAL_HOME/pi3d_demos\"|g" \
         -e "s|/home/pi|$REAL_HOME|g" \
-        -e "s|ExecStart=.*|ExecStart=$EXEC_START|g" \
+        -e "s|__UID__|$USER_UID|g" \
+        -e "s|__EXEC_START__|$EXEC_START|g" \
         "$PROJECT_DIR/systemd/photoframe.service" > /etc/systemd/system/photoframe.service
 
     # Reload systemd
@@ -578,28 +484,6 @@ else
     echo -e "  ${YELLOW}⚠${NC} Could not find config.txt"
 fi
 
-
-# Force HDMI output for headless operation
-echo "  Configuring headless HDMI output..."
-
-CMDLINE_FILE="/boot/firmware/cmdline.txt"
-
-if [ -f "$CMDLINE_FILE" ]; then
-    # Check if video parameter already exists
-    if ! grep -q "video=HDMI-A-1:" "$CMDLINE_FILE"; then
-        # Backup original
-        cp "$CMDLINE_FILE" "$CMDLINE_FILE.backup"
-
-        # Add video parameter to end of line (must stay on same line)
-        sed -i "s/$/ video=HDMI-A-1:1920x1080@60D/" "$CMDLINE_FILE"
-        echo -e "  ${GREEN}✓${NC} HDMI output forced in cmdline.txt"
-        echo "  Note: Reboot required for this change to take effect"
-    else
-        echo "  ℹ HDMI output already configured"
-    fi
-else
-    echo -e "  ${YELLOW}⚠${NC} cmdline.txt not found at $CMDLINE_FILE"
-fi
 echo -e "   ${GREEN}✓${NC} Pi optimization complete"
 echo ""
 
@@ -611,22 +495,21 @@ sudo -u "$REAL_USER" "$SCRIPT_DIR/test_setup.sh" || true
 
 echo ""
 
-# Step 11: Headless configuration guidance
+# Step 11: Boot mode configuration guidance
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  📺 Headless Configuration"
+echo "  📺 Boot Mode Configuration (IMPORTANT)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo -e "${YELLOW}IMPORTANT: Reboot required for HDMI force to take effect${NC}"
+echo -e "${YELLOW}For optimal cage performance:${NC}"
 echo ""
-echo "After reboot:"
-echo "  sudo systemctl start photoframe.service"
+echo "1. Run: sudo raspi-config"
+echo "2. Select: System Options → Boot / Auto Login"
+echo "3. Choose: Console Autologin (B2)"
+echo "4. Finish and reboot"
 echo ""
-echo "Monitor logs:"
-echo "  journalctl -u photoframe.service -f"
-echo ""
-echo "The photo frame will run in true headless mode using DRM/KMS."
-echo "No screen needed - GPU renders directly to framebuffer."
+echo "This boots to console (not desktop), saving ~33MB RAM."
+echo "The photoframe service will start automatically."
 echo ""
 
 echo -e "${GREEN}=============================================="
@@ -638,7 +521,7 @@ echo ""
 echo "1. Edit configuration (if needed):"
 echo "   nano $CONFIG_FILE"
 echo ""
-echo "2. Configure Dropbox (if not done):"
+echo "2. Configure Google Drive (if not done):"
 echo "   ./scripts/setup_rclone.sh"
 echo ""
 echo "3. Test the sync:"
