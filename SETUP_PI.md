@@ -627,6 +627,77 @@ gdrive_remote = gdrive:                      # Remote "gdrive", root of Drive
 
 If you prefer to configure on the Pi itself, run `./scripts/setup_rclone.sh` and follow the headless authentication instructions provided by the script.
 
+#### Setting Up Family Sharing
+
+The default Dropbox App Folder scope restricts access to a private app folder that cannot be shared. To allow family members to upload photos, you need Full Dropbox access.
+
+**Step 1: Create a Shared Folder**
+
+1. Go to your main Dropbox (web or app)
+2. Create a new folder: `FamilyPhotoFrame` (or any name you prefer)
+3. Share this folder with family members
+4. Family members can now upload photos to this folder
+
+**Step 2: Create Full Access Dropbox App**
+
+1. Go to [Dropbox Developer Console](https://www.dropbox.com/developers/apps)
+2. Click "Create app"
+3. Choose "Scoped access"
+4. Choose "Full Dropbox" (NOT "App folder")
+5. Name it: `PhotoFrame-Full-2025` (or similar)
+6. Click "Create app"
+
+**Step 3: Configure App Permissions**
+
+1. In the app settings, go to "Permissions" tab
+2. Check these permissions:
+   - `files.metadata.read`
+   - `files.content.read`
+   - `files.content.write`
+3. Click "Submit"
+
+**Step 4: Get App Credentials**
+
+1. In "Settings" tab, find "App key" and "App secret"
+2. Under "OAuth 2", add Redirect URI: `http://localhost:53682/`
+3. Copy the App key and App secret
+
+**Step 5: Reconfigure Rclone**
+
+On your Mac/PC (easier than on Pi):
+
+```bash
+rclone config
+
+# Choose your existing "photoframe" remote or create new
+# Enter the NEW App key and App secret from Step 4
+# Complete OAuth authorization in browser
+
+# Find config location
+rclone config file
+
+# Copy to Pi
+scp ~/.config/rclone/rclone.conf mouxy@<pi-ip>:~/.config/rclone/
+```
+
+**Step 6: Update Photo Frame Config**
+
+Edit `photoframe_config.ini` on your Pi:
+```ini
+gdrive_remote = photoframe:FamilyPhotoFrame
+```
+
+**Step 7: Test**
+
+```bash
+# On Pi
+rclone lsd photoframe:
+rclone lsd photoframe:FamilyPhotoFrame
+
+# Test sync
+./scripts/sync.sh
+```
+
 ### 5. Test Everything
 
 Run the verification script:

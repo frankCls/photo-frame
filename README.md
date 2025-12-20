@@ -230,6 +230,18 @@ low_level_retries = 10     # WiFi stability
 3. **Wait for sync** (default: every 15 minutes)
 4. **Photos appear automatically** on the frame
 
+#### Sharing with Family
+
+**Note**: The default Dropbox App Folder cannot be shared. To enable family uploads:
+
+1. Create a regular Dropbox folder (e.g., "FamilyPhotoFrame")
+2. Share it with family members
+3. Create a new Dropbox app with "Full Dropbox" access (not "App Folder")
+4. Reconfigure rclone with the new app credentials
+5. Update `gdrive_remote` in config to point to your shared folder
+
+See [SETUP_PI.md](SETUP_PI.md#setting-up-family-sharing) for detailed step-by-step instructions.
+
 ### Manual Operations
 
 #### Trigger Sync Manually
