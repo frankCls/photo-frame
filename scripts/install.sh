@@ -328,7 +328,7 @@ if [ -f "$PI3D_CONFIG" ]; then
     sed -i "s/^SHOW_INFO = .*/SHOW_INFO = False/" "$PI3D_CONFIG"
     sed -i "s/^SHOW_NAMES = .*/SHOW_NAMES = False/" "$PI3D_CONFIG"
     sed -i "s/^SHOW_DATE = .*/SHOW_DATE = False/" "$PI3D_CONFIG"
-    sed -i "s/^SHOW_TEXT = .*/SHOW_TEXT = []/" "$PI3D_CONFIG"
+    sed -i "s/^SHOW_TEXT = .*/SHOW_TEXT = 0/" "$PI3D_CONFIG"
 
     chown "$REAL_USER:$REAL_USER" "$PI3D_CONFIG"
 
