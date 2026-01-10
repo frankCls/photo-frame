@@ -203,6 +203,41 @@ class PhotoFrameProcessor:
             logging.error(f"Failed to process {raw_path.name}: {str(e)}")
             return False
 
+    def cleanup_orphaned_photos(self):
+        """Remove processed photos that no longer have corresponding raw photos."""
+        if not self.processed_dir.exists():
+            return
+
+        # Supported image extensions for raw photos
+        image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.heic'}
+
+        # Get stems of all raw photos (filename without extension)
+        raw_stems = {
+            f.stem for f in self.raw_dir.iterdir()
+            if f.is_file() and f.suffix.lower() in image_extensions
+        } if self.raw_dir.exists() else set()
+
+        # Check each processed photo
+        deleted_count = 0
+        for processed_file in self.processed_dir.iterdir():
+            if not processed_file.is_file():
+                continue
+
+            # Check if corresponding raw photo exists (using stem for matching)
+            if processed_file.stem not in raw_stems:
+                # Orphaned processed photo - delete it
+                logging.info(f"Removing orphaned processed photo: {processed_file.name}")
+                try:
+                    processed_file.unlink()
+                    deleted_count += 1
+                except Exception as e:
+                    logging.error(f"Failed to delete {processed_file.name}: {e}")
+
+        if deleted_count > 0:
+            logging.info(f"Cleanup complete: {deleted_count} orphaned photo(s) removed")
+        else:
+            logging.debug("No orphaned photos found")
+
     def process_all(self):
         """Process all images in the raw directory."""
         if not self.raw_dir.exists():
@@ -244,6 +279,9 @@ class PhotoFrameProcessor:
                 fail_count += 1
 
         logging.info(f"Processing complete: {success_count} processed, {skip_count} skipped, {fail_count} failed")
+
+        # Cleanup orphaned processed photos (photos deleted from Dropbox)
+        self.cleanup_orphaned_photos()
 
 
 def main():
