@@ -708,7 +708,58 @@ Run the verification script:
 
 This checks that all components are properly configured.
 
-### 6. Test Manual Sync
+### 6. Pre-Configure WiFi for Different Location (Optional)
+
+If you're giving the photo frame as a gift or moving it to a different location, you can pre-configure WiFi networks that aren't currently in range.
+
+#### The "Blind" Configuration Method (Raspberry Pi OS Trixie)
+
+Since Trixie uses NetworkManager, you can add connection profiles without the network being active. The Pi will automatically connect when moved to that location.
+
+**Quick Method - Use Helper Script:**
+
+```bash
+sudo ./scripts/add_wifi.sh
+```
+
+The script will prompt for the target SSID and password.
+
+**Manual Method - Direct nmcli Command:**
+
+```bash
+sudo nmcli con add type wifi \
+  ifname wlan0 \
+  con-name "Target_SSID_Name" \
+  ssid "Target_SSID_Name" \
+  wifi-sec.key-mgmt wpa-psk \
+  wifi-sec.psk "Your_WiFi_Password"
+
+# Ensure auto-connect is enabled
+sudo nmcli con modify "Target_SSID_Name" connection.autoconnect yes
+```
+
+**Command breakdown:**
+- `con add`: Adds connection profile without activating immediately
+- `ifname wlan0`: Binds to wireless interface
+- `con-name`: Name you'll see in connection list
+- `ssid`: Actual network name to connect to
+- `wifi-sec.key-mgmt wpa-psk`: WPA/WPA2 security (standard for home networks)
+- `wifi-sec.psk`: WiFi password
+
+**Verify it was saved:**
+
+```bash
+sudo nmcli con show | grep wifi
+# You should see both your current network and target network
+```
+
+**What happens next:**
+When you move the Pi to the new location and power it on, NetworkManager will detect the SSID and automatically connect using the saved profile.
+
+**Important Note for Trixie:**
+Raspberry Pi OS Trixie may use Netplan as a backend for NetworkManager. In most current builds, nmcli is still the source of truth for wireless connections. If the connection disappears after reboot, you may need to verify Netplan configuration, but this is rare.
+
+### 7. Test Manual Sync
 
 ```bash
 ./scripts/sync.sh
@@ -719,7 +770,7 @@ Check the logs:
 tail -f ~/photo-frame/logs/sync.log
 ```
 
-### 7. Reboot
+### 8. Reboot
 
 ```bash
 sudo reboot

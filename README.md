@@ -242,6 +242,17 @@ low_level_retries = 10     # WiFi stability
 
 See [SETUP_PI.md](SETUP_PI.md#setting-up-family-sharing) for detailed step-by-step instructions.
 
+#### WiFi Configuration for Different Locations
+
+If giving the photo frame as a gift or moving to a different location, you can pre-configure WiFi networks before moving the Pi:
+
+```bash
+# Add WiFi network that's not currently in range
+sudo ./scripts/add_wifi.sh
+```
+
+The Pi will automatically connect to any configured network when in range. See [SETUP_PI.md](SETUP_PI.md#6-pre-configure-wifi-for-different-location-optional) for detailed instructions.
+
 ### Manual Operations
 
 #### Trigger Sync Manually
