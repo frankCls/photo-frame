@@ -82,15 +82,25 @@ class PhotoFrameProcessor:
         # Ensure log directory exists
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
 
-        # Configure logging
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(self.log_file),
-                logging.StreamHandler(sys.stdout)
-            ]
-        )
+        # Get the root logger
+        logger = logging.getLogger()
+
+        # Only configure if not already configured (no handlers attached)
+        if not logger.handlers:
+            logger.setLevel(logging.INFO)
+
+            # Create formatter
+            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+            # File handler
+            file_handler = logging.FileHandler(self.log_file)
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+
+            # Console handler
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setFormatter(formatter)
+            logger.addHandler(console_handler)
 
     def _get_memory_info(self):
         """
