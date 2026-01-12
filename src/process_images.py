@@ -166,45 +166,6 @@ class PhotoFrameProcessor:
         except Exception as e:
             return False, f"Invalid or corrupted image file: {str(e)}"
 
-    def _downsample_if_needed(self, img):
-        """
-        Downsample image if either dimension exceeds max_input_dimension.
-        This prevents out-of-memory errors on low-RAM devices.
-
-        Args:
-            img: PIL Image object
-
-        Returns:
-            PIL Image object (either original or downsampled copy)
-        """
-        # Check if downsampling is disabled
-        if self.max_input_dimension <= 0:
-            return img
-
-        # Check if image exceeds maximum dimension
-        max_dim = max(img.width, img.height)
-        if max_dim <= self.max_input_dimension:
-            # Image is within limits
-            return img
-
-        # Calculate new dimensions maintaining aspect ratio
-        if img.width > img.height:
-            # Landscape or square
-            new_width = self.max_input_dimension
-            new_height = int(img.height * (self.max_input_dimension / img.width))
-        else:
-            # Portrait
-            new_height = self.max_input_dimension
-            new_width = int(img.width * (self.max_input_dimension / img.height))
-
-        logging.warning(f"Large image detected ({img.width}x{img.height}), downsampling to ({new_width}x{new_height}) "
-                       f"to prevent memory exhaustion")
-
-        # Downsample using high-quality LANCZOS resampling
-        downsampled = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-
-        return downsampled
-
     def is_landscape(self, img):
         """Check if image is landscape orientation."""
         return img.width >= img.height
@@ -300,44 +261,127 @@ class PhotoFrameProcessor:
                     logging.warning(f"LOW MEMORY: Only {mem_before['available_mb']:.1f} MB available. "
                                   f"Processing may fail or cause OOM kill.")
 
-            # Step 3: Open and process image
-            # Note: We need to reopen after verify() because verify() invalidates the image
+            # Step 3: Peek at dimensions to determine if downsampling is needed
             with Image.open(raw_path) as img:
-                # Log image dimensions
-                logging.info(f"Image dimensions: {img.width}x{img.height}, mode: {img.mode}")
+                original_width, original_height = img.size
+                original_mode = img.mode
+                logging.info(f"Image dimensions: {original_width}x{original_height}, mode: {original_mode}")
 
-                # Convert to RGB if needed (handles RGBA, P, etc.)
-                if img.mode not in ('RGB', 'L'):
-                    logging.debug(f"Converting from {img.mode} to RGB")
-                    img = img.convert('RGB')
+            # Step 4: Check if downsampling is needed
+            needs_downsample = False
+            new_width, new_height = original_width, original_height
 
-                # Auto-rotate based on EXIF orientation
-                img = ImageOps.exif_transpose(img)
+            if self.max_input_dimension > 0:
+                max_dim = max(original_width, original_height)
+                if max_dim > self.max_input_dimension:
+                    needs_downsample = True
+                    # Calculate target dimensions maintaining aspect ratio
+                    if original_width > original_height:
+                        new_width = self.max_input_dimension
+                        new_height = int(original_height * (self.max_input_dimension / original_width))
+                    else:
+                        new_height = self.max_input_dimension
+                        new_width = int(original_width * (self.max_input_dimension / original_height))
 
-                # Downsample if image is too large (prevents OOM on low-RAM devices)
-                img = self._downsample_if_needed(img)
+                    logging.warning(f"Large image detected ({original_width}x{original_height}), "
+                                   f"will downsample to ({new_width}x{new_height}) to prevent memory exhaustion")
 
-                # Choose processing strategy based on orientation
-                if self.is_landscape(img):
-                    processed = self.process_landscape(img)
-                else:
-                    processed = self.process_portrait(img)
+            # Step 5: Process image with memory-efficient downsampling if needed
+            if needs_downsample:
+                # Use temp file approach to avoid double memory usage
+                temp_path = raw_path.parent / f".tmp_{raw_path.name}"
 
-                # Step 4: Save processed image
-                output_path = self.processed_dir / raw_path.name
+                try:
+                    # Load, downsample, and save to temp file
+                    with Image.open(raw_path) as img:
+                        # Convert to RGB if needed
+                        if img.mode not in ('RGB', 'L'):
+                            logging.debug(f"Converting from {img.mode} to RGB")
+                            img = img.convert('RGB')
 
-                # Convert to JPG if not already
-                if output_path.suffix.lower() in ['.png', '.bmp', '.gif', '.tiff']:
-                    output_path = output_path.with_suffix('.jpg')
+                        # Auto-rotate based on EXIF orientation
+                        img = ImageOps.exif_transpose(img)
 
-                processed.save(
-                    output_path,
-                    'JPEG',
-                    quality=self.jpeg_quality,
-                    optimize=True
-                )
+                        # Create downsampled copy
+                        logging.debug(f"Creating downsampled copy: {new_width}x{new_height}")
+                        downsampled = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
-                logging.info(f"Saved: {output_path.name} ({self.screen_width}x{self.screen_height})")
+                        # Save to temp file
+                        downsampled.save(temp_path, 'JPEG', quality=95)
+
+                    # Original and downsampled are now freed (exited context manager)
+                    # Force garbage collection to ensure memory is released
+                    gc.collect()
+
+                    # Log memory after freeing original
+                    mem_after_downsample = self._get_memory_info()
+                    if mem_after_downsample:
+                        logging.info(f"Memory after downsampling: {mem_after_downsample['available_mb']:.1f} MB available")
+
+                    # Reload the smaller image for processing
+                    with Image.open(temp_path) as img:
+                        logging.debug(f"Reloaded downsampled image: {img.width}x{img.height}")
+
+                        # Choose processing strategy based on orientation
+                        if self.is_landscape(img):
+                            processed = self.process_landscape(img)
+                        else:
+                            processed = self.process_portrait(img)
+
+                        # Save final processed image
+                        output_path = self.processed_dir / raw_path.name
+
+                        # Convert to JPG if not already
+                        if output_path.suffix.lower() in ['.png', '.bmp', '.gif', '.tiff']:
+                            output_path = output_path.with_suffix('.jpg')
+
+                        processed.save(
+                            output_path,
+                            'JPEG',
+                            quality=self.jpeg_quality,
+                            optimize=True
+                        )
+
+                        logging.info(f"Saved: {output_path.name} ({self.screen_width}x{self.screen_height})")
+
+                finally:
+                    # Clean up temp file
+                    if temp_path.exists():
+                        temp_path.unlink()
+                        logging.debug(f"Cleaned up temp file: {temp_path.name}")
+
+            else:
+                # No downsampling needed, process normally
+                with Image.open(raw_path) as img:
+                    # Convert to RGB if needed
+                    if img.mode not in ('RGB', 'L'):
+                        logging.debug(f"Converting from {img.mode} to RGB")
+                        img = img.convert('RGB')
+
+                    # Auto-rotate based on EXIF orientation
+                    img = ImageOps.exif_transpose(img)
+
+                    # Choose processing strategy based on orientation
+                    if self.is_landscape(img):
+                        processed = self.process_landscape(img)
+                    else:
+                        processed = self.process_portrait(img)
+
+                    # Save processed image
+                    output_path = self.processed_dir / raw_path.name
+
+                    # Convert to JPG if not already
+                    if output_path.suffix.lower() in ['.png', '.bmp', '.gif', '.tiff']:
+                        output_path = output_path.with_suffix('.jpg')
+
+                    processed.save(
+                        output_path,
+                        'JPEG',
+                        quality=self.jpeg_quality,
+                        optimize=True
+                    )
+
+                    logging.info(f"Saved: {output_path.name} ({self.screen_width}x{self.screen_height})")
 
             # Step 5: Check memory after processing
             mem_after = self._get_memory_info()
