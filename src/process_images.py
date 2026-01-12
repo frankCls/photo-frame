@@ -50,6 +50,7 @@ class PhotoFrameProcessor:
         self.blur_radius = self.config.getint('ImageProcessing', 'blur_radius')
         self.jpeg_quality = self.config.getint('ImageProcessing', 'jpeg_quality')
         self.resampling_str = self.config.get('ImageProcessing', 'resampling')
+        self.max_input_dimension = self.config.getint('ImageProcessing', 'max_input_dimension', fallback=4000)
 
         # Map resampling string to Pillow constant
         resampling_map = {
@@ -165,6 +166,45 @@ class PhotoFrameProcessor:
         except Exception as e:
             return False, f"Invalid or corrupted image file: {str(e)}"
 
+    def _downsample_if_needed(self, img):
+        """
+        Downsample image if either dimension exceeds max_input_dimension.
+        This prevents out-of-memory errors on low-RAM devices.
+
+        Args:
+            img: PIL Image object
+
+        Returns:
+            PIL Image object (either original or downsampled copy)
+        """
+        # Check if downsampling is disabled
+        if self.max_input_dimension <= 0:
+            return img
+
+        # Check if image exceeds maximum dimension
+        max_dim = max(img.width, img.height)
+        if max_dim <= self.max_input_dimension:
+            # Image is within limits
+            return img
+
+        # Calculate new dimensions maintaining aspect ratio
+        if img.width > img.height:
+            # Landscape or square
+            new_width = self.max_input_dimension
+            new_height = int(img.height * (self.max_input_dimension / img.width))
+        else:
+            # Portrait
+            new_height = self.max_input_dimension
+            new_width = int(img.width * (self.max_input_dimension / img.height))
+
+        logging.warning(f"Large image detected ({img.width}x{img.height}), downsampling to ({new_width}x{new_height}) "
+                       f"to prevent memory exhaustion")
+
+        # Downsample using high-quality LANCZOS resampling
+        downsampled = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+        return downsampled
+
     def is_landscape(self, img):
         """Check if image is landscape orientation."""
         return img.width >= img.height
@@ -273,6 +313,9 @@ class PhotoFrameProcessor:
 
                 # Auto-rotate based on EXIF orientation
                 img = ImageOps.exif_transpose(img)
+
+                # Downsample if image is too large (prevents OOM on low-RAM devices)
+                img = self._downsample_if_needed(img)
 
                 # Choose processing strategy based on orientation
                 if self.is_landscape(img):
