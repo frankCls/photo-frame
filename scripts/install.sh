@@ -426,14 +426,16 @@ SYNC_INTERVAL=$(sudo -u "$REAL_USER" python3 -c "import configparser; c=configpa
 CRON_JOB="*/$SYNC_INTERVAL * * * * $SCRIPT_DIR/sync.sh"
 
 # Check if cron job already exists
-if sudo -u "$REAL_USER" crontab -l 2>/dev/null | grep -q "photoframe.*sync.sh"; then
+if sudo -u "$REAL_USER" crontab -l 2>/dev/null | grep -qF "$SCRIPT_DIR/sync.sh"; then
     echo "  ℹ Cron job already exists"
     read -p "  Do you want to update it? (y/n): " UPDATE_CRON
     if [[ $UPDATE_CRON =~ ^[Yy]$ ]]; then
         # Remove old and add new
-        sudo -u "$REAL_USER" crontab -l 2>/dev/null | grep -v "photoframe.*sync.sh" | sudo -u "$REAL_USER" crontab -
+        sudo -u "$REAL_USER" crontab -l 2>/dev/null | grep -vF "$SCRIPT_DIR/sync.sh" | sudo -u "$REAL_USER" crontab -
         (sudo -u "$REAL_USER" crontab -l 2>/dev/null; echo "$CRON_JOB") | sudo -u "$REAL_USER" crontab -
         echo -e "  ${GREEN}✓${NC} Cron job updated"
+    else
+        echo "  ℹ Keeping existing cron job"
     fi
 else
     # Add new cron job
