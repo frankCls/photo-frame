@@ -180,6 +180,30 @@ class PhotoFrameProcessor:
         """Check if image is landscape orientation."""
         return img.width >= img.height
 
+    def needs_blurred_background(self, img):
+        """
+        Check if image needs blurred background instead of crop.
+
+        Images narrower than the screen aspect ratio benefit from blurred
+        backgrounds to avoid cropping important content.
+
+        Note: Uses screen_width and screen_height from config file
+        (photoframe_config.ini [Display] section) to calculate aspect ratio.
+        This respects the user's actual screen configuration.
+
+        Args:
+            img: PIL Image object
+
+        Returns:
+            bool: True if blurred background should be used
+        """
+        # Calculate aspect ratios using configured screen dimensions
+        img_aspect = img.width / img.height
+        screen_aspect = self.screen_width / self.screen_height  # From config file
+
+        # If image is narrower than screen, use blurred background
+        return img_aspect < screen_aspect
+
     def process_landscape(self, img):
         """
         Process landscape photo with strict crop strategy.
@@ -202,7 +226,10 @@ class PhotoFrameProcessor:
         Process portrait photo with blurred background strategy.
         Prevents subject cropping and eliminates black bars.
         """
-        logging.info(f"Processing as portrait: {img.width}x{img.height}")
+        if img.width >= img.height:
+            logging.info(f"Processing as narrow landscape with blur: {img.width}x{img.height}")
+        else:
+            logging.info(f"Processing as portrait: {img.width}x{img.height}")
 
         # Step 1: Create blurred background
         blurred_bg = img.copy()
@@ -332,10 +359,12 @@ class PhotoFrameProcessor:
                     with Image.open(temp_path) as img:
                         logging.debug(f"Reloaded downsampled image: {img.width}x{img.height}")
 
-                        # Choose processing strategy based on orientation
-                        if self.is_landscape(img):
+                        # Choose processing strategy based on orientation and aspect ratio
+                        if self.is_landscape(img) and not self.needs_blurred_background(img):
+                            # Wide landscape: use crop strategy
                             processed = self.process_landscape(img)
                         else:
+                            # Portrait or narrow landscape: use blurred background
                             processed = self.process_portrait(img)
 
                         # Save final processed image
@@ -371,10 +400,12 @@ class PhotoFrameProcessor:
                     # Auto-rotate based on EXIF orientation
                     img = ImageOps.exif_transpose(img)
 
-                    # Choose processing strategy based on orientation
-                    if self.is_landscape(img):
+                    # Choose processing strategy based on orientation and aspect ratio
+                    if self.is_landscape(img) and not self.needs_blurred_background(img):
+                        # Wide landscape: use crop strategy
                         processed = self.process_landscape(img)
                     else:
+                        # Portrait or narrow landscape: use blurred background
                         processed = self.process_portrait(img)
 
                     # Save processed image
