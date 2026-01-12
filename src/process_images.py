@@ -10,6 +10,8 @@ Handles two strategies:
 
 import os
 import sys
+import gc
+import traceback
 from pathlib import Path
 from configparser import ConfigParser
 from PIL import Image, ImageFilter, ImageOps
@@ -89,6 +91,80 @@ class PhotoFrameProcessor:
             ]
         )
 
+    def _get_memory_info(self):
+        """
+        Get current memory usage information.
+
+        Returns:
+            dict: Memory info with 'available_mb' and 'total_mb' keys, or None if unavailable
+        """
+        try:
+            # Read /proc/meminfo to get memory stats (Linux only)
+            with open('/proc/meminfo', 'r') as f:
+                meminfo = {}
+                for line in f:
+                    parts = line.split(':')
+                    if len(parts) == 2:
+                        key = parts[0].strip()
+                        # Extract number from value (e.g., "1234 kB" -> 1234)
+                        value_str = parts[1].strip().split()[0]
+                        meminfo[key] = int(value_str)
+
+                # Calculate available memory in MB
+                # MemAvailable is the best indicator (includes reclaimable cache)
+                available_kb = meminfo.get('MemAvailable', meminfo.get('MemFree', 0))
+                total_kb = meminfo.get('MemTotal', 0)
+
+                return {
+                    'available_mb': available_kb / 1024,
+                    'total_mb': total_kb / 1024,
+                    'available_percent': (available_kb / total_kb * 100) if total_kb > 0 else 0
+                }
+        except Exception as e:
+            logging.debug(f"Could not read memory info: {e}")
+            return None
+
+    def _validate_image_file(self, file_path):
+        """
+        Validate that a file is readable and a valid image.
+
+        Args:
+            file_path: Path to the file to validate
+
+        Returns:
+            tuple: (is_valid, error_message)
+        """
+        # Check if file exists and is readable
+        if not file_path.exists():
+            return False, f"File does not exist: {file_path}"
+
+        if not file_path.is_file():
+            return False, f"Path is not a file: {file_path}"
+
+        if not os.access(file_path, os.R_OK):
+            return False, f"File is not readable: {file_path}"
+
+        # Check file size
+        try:
+            file_size = file_path.stat().st_size
+            if file_size == 0:
+                return False, f"File is empty (0 bytes)"
+
+            # Log file size for diagnostics
+            size_mb = file_size / (1024 * 1024)
+            logging.debug(f"File size: {size_mb:.2f} MB")
+        except Exception as e:
+            return False, f"Could not read file size: {e}"
+
+        # Try to open the image file to validate it's a valid image
+        try:
+            with Image.open(file_path) as img:
+                # Try to load image data to catch truncated/corrupted files
+                img.verify()
+            return True, None
+        except Exception as e:
+            return False, f"Invalid or corrupted image file: {str(e)}"
+
     def is_landscape(self, img):
         """Check if image is landscape orientation."""
         return img.width >= img.height
@@ -167,10 +243,32 @@ class PhotoFrameProcessor:
         try:
             logging.info(f"Processing: {raw_path.name}")
 
-            # Open and handle EXIF orientation
+            # Step 1: Validate file before processing
+            is_valid, error_msg = self._validate_image_file(raw_path)
+            if not is_valid:
+                logging.error(f"Validation failed for {raw_path.name}: {error_msg}")
+                return False
+
+            # Step 2: Check memory before processing
+            mem_before = self._get_memory_info()
+            if mem_before:
+                logging.info(f"Memory before processing: {mem_before['available_mb']:.1f} MB available "
+                           f"({mem_before['available_percent']:.1f}% of {mem_before['total_mb']:.0f} MB)")
+
+                # Warn if memory is low (less than 100MB available)
+                if mem_before['available_mb'] < 100:
+                    logging.warning(f"LOW MEMORY: Only {mem_before['available_mb']:.1f} MB available. "
+                                  f"Processing may fail or cause OOM kill.")
+
+            # Step 3: Open and process image
+            # Note: We need to reopen after verify() because verify() invalidates the image
             with Image.open(raw_path) as img:
+                # Log image dimensions
+                logging.info(f"Image dimensions: {img.width}x{img.height}, mode: {img.mode}")
+
                 # Convert to RGB if needed (handles RGBA, P, etc.)
                 if img.mode not in ('RGB', 'L'):
+                    logging.debug(f"Converting from {img.mode} to RGB")
                     img = img.convert('RGB')
 
                 # Auto-rotate based on EXIF orientation
@@ -182,7 +280,7 @@ class PhotoFrameProcessor:
                 else:
                     processed = self.process_portrait(img)
 
-                # Save processed image
+                # Step 4: Save processed image
                 output_path = self.processed_dir / raw_path.name
 
                 # Convert to JPG if not already
@@ -197,10 +295,33 @@ class PhotoFrameProcessor:
                 )
 
                 logging.info(f"Saved: {output_path.name} ({self.screen_width}x{self.screen_height})")
-                return True
 
+            # Step 5: Check memory after processing
+            mem_after = self._get_memory_info()
+            if mem_after and mem_before:
+                mem_used = mem_before['available_mb'] - mem_after['available_mb']
+                logging.info(f"Memory after processing: {mem_after['available_mb']:.1f} MB available "
+                           f"(used {mem_used:.1f} MB for this image)")
+
+            return True
+
+        except MemoryError as e:
+            logging.error(f"OUT OF MEMORY while processing {raw_path.name}")
+            logging.error(f"Error details: {str(e)}")
+            logging.error("Traceback:\n" + traceback.format_exc())
+            return False
+        except IOError as e:
+            logging.error(f"I/O ERROR while processing {raw_path.name}: {str(e)}")
+            logging.error("Traceback:\n" + traceback.format_exc())
+            return False
+        except OSError as e:
+            logging.error(f"OS ERROR while processing {raw_path.name}: {str(e)}")
+            logging.error("Traceback:\n" + traceback.format_exc())
+            return False
         except Exception as e:
-            logging.error(f"Failed to process {raw_path.name}: {str(e)}")
+            logging.error(f"UNEXPECTED ERROR while processing {raw_path.name}: {str(e)}")
+            logging.error(f"Error type: {type(e).__name__}")
+            logging.error("Traceback:\n" + traceback.format_exc())
             return False
 
     def cleanup_orphaned_photos(self):
@@ -257,7 +378,8 @@ class PhotoFrameProcessor:
             logging.info("No images found to process")
             return
 
-        logging.info(f"Found {len(image_files)} images to process")
+        total_images = len(image_files)
+        logging.info(f"Found {total_images} images to process")
 
         # Get list of already processed files
         processed_files = {f.stem for f in self.processed_dir.iterdir() if f.is_file()}
@@ -265,20 +387,62 @@ class PhotoFrameProcessor:
         success_count = 0
         skip_count = 0
         fail_count = 0
+        current_index = 0
+
+        # Log initial memory state
+        initial_mem = self._get_memory_info()
+        if initial_mem:
+            logging.info(f"Initial memory state: {initial_mem['available_mb']:.1f} MB available "
+                       f"({initial_mem['available_percent']:.1f}% of {initial_mem['total_mb']:.0f} MB)")
 
         for image_file in image_files:
+            current_index += 1
+
             # Skip if already processed (check stem to handle format conversions)
             if image_file.stem in processed_files:
-                logging.debug(f"Skipping already processed: {image_file.name}")
+                logging.info(f"[{current_index}/{total_images}] Skipping already processed: {image_file.name}")
                 skip_count += 1
                 continue
 
+            # Log progress
+            logging.info(f"[{current_index}/{total_images}] Starting to process: {image_file.name}")
+
+            # Process the image
             if self.process_image(image_file):
                 success_count += 1
+                logging.info(f"[{current_index}/{total_images}] Successfully processed: {image_file.name}")
             else:
                 fail_count += 1
+                logging.error(f"[{current_index}/{total_images}] Failed to process: {image_file.name}")
 
+            # Force garbage collection after each image to free memory
+            # This is especially important on low-memory devices like Pi Zero 2 W
+            if current_index < total_images:  # Don't log on last iteration
+                gc.collect()
+                mem_after_gc = self._get_memory_info()
+                if mem_after_gc:
+                    logging.debug(f"After garbage collection: {mem_after_gc['available_mb']:.1f} MB available")
+
+        # Final summary
+        logging.info("=" * 60)
         logging.info(f"Processing complete: {success_count} processed, {skip_count} skipped, {fail_count} failed")
+
+        # Highlight discrepancies
+        expected_to_process = total_images - skip_count
+        actually_processed = success_count + fail_count
+        if actually_processed < expected_to_process:
+            logging.warning(f"DISCREPANCY DETECTED: Expected to process {expected_to_process} images, "
+                          f"but only attempted {actually_processed}. "
+                          f"This suggests the script may have been interrupted or killed.")
+
+        # Log final memory state
+        final_mem = self._get_memory_info()
+        if final_mem and initial_mem:
+            mem_change = initial_mem['available_mb'] - final_mem['available_mb']
+            logging.info(f"Final memory state: {final_mem['available_mb']:.1f} MB available "
+                       f"(net change: {mem_change:+.1f} MB)")
+
+        logging.info("=" * 60)
 
         # Cleanup orphaned processed photos (photos deleted from Dropbox)
         self.cleanup_orphaned_photos()
