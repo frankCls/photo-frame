@@ -432,14 +432,14 @@ if sudo -u "$REAL_USER" crontab -l 2>/dev/null | grep -qF "$SCRIPT_DIR/sync.sh";
     if [[ $UPDATE_CRON =~ ^[Yy]$ ]]; then
         # Remove old and add new
         sudo -u "$REAL_USER" crontab -l 2>/dev/null | grep -vF "$SCRIPT_DIR/sync.sh" | sudo -u "$REAL_USER" crontab -
-        (sudo -u "$REAL_USER" crontab -l 2>/dev/null; echo "$CRON_JOB") | sudo -u "$REAL_USER" crontab -
+        (sudo -u "$REAL_USER" crontab -l 2>/dev/null || true; echo "$CRON_JOB") | sudo -u "$REAL_USER" crontab -
         echo -e "  ${GREEN}✓${NC} Cron job updated"
     else
         echo "  ℹ Keeping existing cron job"
     fi
 else
     # Add new cron job
-    (sudo -u "$REAL_USER" crontab -l 2>/dev/null; echo "$CRON_JOB") | sudo -u "$REAL_USER" crontab -
+    (sudo -u "$REAL_USER" crontab -l 2>/dev/null || true; echo "$CRON_JOB") | sudo -u "$REAL_USER" crontab -
     echo -e "  ${GREEN}✓${NC} Cron job created: Sync every $SYNC_INTERVAL minutes"
 fi
 echo ""
