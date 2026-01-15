@@ -444,8 +444,74 @@ else
 fi
 echo ""
 
-# Step 7.5: Install OpenGL ES libraries
-echo -e "${BLUE}Step 7.5: Installing OpenGL ES libraries...${NC}"
+# Step 7.5: Setup log rotation
+echo -e "${BLUE}Step 7.5: Setting up log rotation...${NC}"
+
+# Check if logrotate is installed (should be by default on Raspberry Pi OS)
+if ! command -v logrotate &> /dev/null; then
+    echo "  Installing logrotate..."
+    apt-get install -y logrotate
+    echo -e "  ${GREEN}✓${NC} logrotate installed"
+fi
+
+# Get log file path from config (expand ~ to actual home)
+LOG_FILE=$(sudo -u "$REAL_USER" python3 -c "
+import configparser
+import os
+c = configparser.ConfigParser()
+c.read('$CONFIG_FILE')
+log_path = c.get('Paths', 'log_file')
+# Expand variables
+expanded = os.path.expandvars(log_path.replace('%(base_dir)s', c.get('Paths', 'base_dir')))
+print(os.path.expanduser(expanded))
+")
+
+# Create logrotate configuration
+cat > /etc/logrotate.d/photoframe << EOF
+# Log rotation for Raspberry Pi Photo Frame
+# Rotates sync logs to prevent disk space exhaustion
+
+$LOG_FILE {
+    # Rotation schedule
+    daily
+    rotate 3
+    size 10M
+    maxage 3
+
+    # Compression
+    compress
+    delaycompress
+
+    # File handling
+    copytruncate
+    notifempty
+    missingok
+
+    # Permissions
+    create 0644 $REAL_USER $REAL_USER
+    su $REAL_USER $REAL_USER
+
+    # Post-rotation notification
+    sharedscripts
+    postrotate
+        /usr/bin/logger -t photoframe "Log rotation completed"
+    endscript
+}
+EOF
+
+# Verify configuration syntax
+if logrotate -d /etc/logrotate.d/photoframe &> /dev/null; then
+    echo -e "  ${GREEN}✓${NC} Log rotation configured (3 days, 10MB max)"
+    echo "  Rotated logs: ${LOG_FILE}.1 (current), ${LOG_FILE}.2.gz, ${LOG_FILE}.3.gz"
+else
+    echo -e "  ${YELLOW}⚠${NC} Log rotation configuration may have errors"
+    echo "  Test with: sudo logrotate -d /etc/logrotate.d/photoframe"
+fi
+
+echo ""
+
+# Step 8: Install OpenGL ES libraries
+echo -e "${BLUE}Step 8: Installing OpenGL ES libraries...${NC}"
 
 if ! dpkg -l | grep -q "libgles2"; then
     echo "  Installing OpenGL ES libraries..."
@@ -458,8 +524,8 @@ fi
 echo -e "${GREEN}✓${NC} Graphics libraries ready"
 echo ""
 
-# Step 8: Install systemd service
-echo -e "${BLUE}Step 8: Installing systemd service for auto-start...${NC}"
+# Step 9: Install systemd service
+echo -e "${BLUE}Step 9: Installing systemd service for auto-start...${NC}"
 
 # Detect Python path (venv created in Step 2.5)
 if [ -f "$REAL_HOME/photoframe_env/bin/python3" ]; then
@@ -523,8 +589,8 @@ else
 fi
 echo ""
 
-# Step 9: Optimize Pi Zero 2 W settings
-echo -e "${BLUE}Step 9: Optimizing Raspberry Pi settings...${NC}"
+# Step 10: Optimize Pi Zero 2 W settings
+echo -e "${BLUE}Step 10: Optimizing Raspberry Pi settings...${NC}"
 
 # Disable WiFi power management
 if [ -e "/sys/class/net/wlan0" ]; then
@@ -605,15 +671,15 @@ fi
 echo -e "   ${GREEN}✓${NC} Pi optimization complete"
 echo ""
 
-# Step 10: Run verification
-echo -e "${BLUE}Step 10: Running setup verification...${NC}"
+# Step 11: Run verification
+echo -e "${BLUE}Step 11: Running setup verification...${NC}"
 echo ""
 
 sudo -u "$REAL_USER" "$SCRIPT_DIR/test_setup.sh" || true
 
 echo ""
 
-# Step 11: Headless configuration guidance
+# Step 12: Headless configuration guidance
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  📺 Headless Configuration"

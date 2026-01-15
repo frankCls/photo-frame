@@ -69,7 +69,8 @@ sudo ./scripts/install.sh
 The installer will:
 - Install system dependencies (rclone, Python packages)
 - Create directory structure
-- Set up automatic syncing
+- Set up automatic syncing (every 15 minutes)
+- Configure log rotation (3 days, 10MB max)
 - Optionally help configure Dropbox access
 - Generate and install systemd service for auto-start
 - Optimize Pi settings
@@ -265,6 +266,46 @@ The Pi will automatically connect to any configured network when in range. See [
 tail -f ~/photo-frame/logs/sync.log
 ```
 
+#### Log Management
+
+The photo frame automatically rotates logs to prevent disk space issues.
+
+**Settings:**
+- **Retention**: 3 days
+- **Max log size**: 10MB before rotation
+- **Location**: `~/photo-frame/logs/sync.log`
+- **Rotated logs**:
+  - `sync.log.1` - Most recent rotation (uncompressed)
+  - `sync.log.2.gz` - Compressed
+  - `sync.log.3.gz` - Oldest (compressed)
+
+**Viewing logs:**
+```bash
+# Current log
+tail -f ~/photo-frame/logs/sync.log
+
+# Most recent rotation
+cat ~/photo-frame/logs/sync.log.1
+
+# Older compressed logs
+zcat ~/photo-frame/logs/sync.log.2.gz | less
+```
+
+**Manual rotation (requires root):**
+```bash
+sudo logrotate -f /etc/logrotate.d/photoframe
+```
+
+**Check rotation status:**
+```bash
+sudo cat /var/lib/logrotate/status | grep photoframe
+```
+
+**Test configuration (dry-run):**
+```bash
+sudo logrotate -d /etc/logrotate.d/photoframe
+```
+
 #### Test Setup
 ```bash
 ./scripts/test_setup.sh
@@ -427,7 +468,9 @@ sudo ./scripts/uninstall.sh
 This will:
 - Remove cron job
 - Stop and remove systemd service
+- Remove log rotation configuration
 - Clean up lock files
+- Optionally remove rotated logs
 - Optionally remove photos and rclone config
 
 To completely remove everything:
@@ -455,9 +498,10 @@ The installer makes these changes to your Pi:
 
 1. **Cron job**: Adds sync script to user's crontab
 2. **Systemd service**: Dynamically generates and installs `/etc/systemd/system/photoframe.service` with your actual username and paths
-3. **WiFi config**: Disables power management via systemd service
-4. **GPU memory**: Sets `gpu_mem=128` in `/boot/config.txt`
-5. **Directories**: Creates `~/photo-frame/` structure
+3. **Log rotation**: Creates `/etc/logrotate.d/photoframe` for automatic log rotation (3 days, 10MB max)
+4. **WiFi config**: Disables power management via systemd service
+5. **GPU memory**: Sets `gpu_mem=128` in `/boot/config.txt`
+6. **Directories**: Creates `~/photo-frame/` structure
 
 All changes can be reverted with the uninstall script.
 
