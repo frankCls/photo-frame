@@ -84,6 +84,44 @@ if [ -f "/tmp/photoframe_sync.lock" ]; then
     echo "✓ Lock file removed"
 fi
 
+# Remove logrotate configuration
+echo ""
+echo "Removing log rotation configuration..."
+if [ -f "/etc/logrotate.d/photoframe" ]; then
+    rm -f /etc/logrotate.d/photoframe
+    echo "✓ Log rotation configuration removed"
+
+    # Optionally remove rotated logs
+    if [ -f "$CONFIG_FILE" ]; then
+        LOG_FILE=$(python3 -c "
+import configparser
+import os
+c = configparser.ConfigParser()
+c.read('$CONFIG_FILE')
+log_path = c.get('Paths', 'log_file')
+expanded = os.path.expandvars(log_path.replace('%(base_dir)s', c.get('Paths', 'base_dir')))
+print(os.path.expanduser(expanded))
+" 2>/dev/null || echo "")
+
+        if [ -n "$LOG_FILE" ]; then
+            # Check for rotated logs
+            ROTATED_COUNT=$(ls "${LOG_FILE}".* 2>/dev/null | wc -l)
+            if [ "$ROTATED_COUNT" -gt 0 ]; then
+                echo "Found $ROTATED_COUNT rotated log file(s)"
+                read -p "Do you want to remove rotated log files (*.1, *.gz)? (y/n): " DELETE_ROTATED
+                if [[ $DELETE_ROTATED =~ ^[Yy]$ ]]; then
+                    rm -f "${LOG_FILE}".*
+                    echo "✓ Rotated logs removed"
+                else
+                    echo "ℹ Rotated logs preserved"
+                fi
+            fi
+        fi
+    fi
+else
+    echo "ℹ No log rotation configuration found"
+fi
+
 # Ask about photo data
 echo ""
 echo "Photo data management:"
