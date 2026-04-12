@@ -299,7 +299,14 @@ class PhotoFrameProcessor:
                                   f"Processing may fail or cause OOM kill.")
 
             # Step 3: Peek at dimensions to determine if downsampling is needed
+            # IMPORTANT: Apply EXIF rotation first to get correct dimensions
             with Image.open(raw_path) as img:
+                # Auto-rotate based on EXIF orientation before getting dimensions
+                img = ImageOps.exif_transpose(img)
+                if img is None:
+                    # If exif_transpose returns None, reopen the image
+                    img = Image.open(raw_path)
+                
                 original_width, original_height = img.size
                 original_mode = img.mode
                 logging.info(f"Image dimensions: {original_width}x{original_height}, mode: {original_mode}")
